@@ -30,7 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
     { id: "learn", label: "Learn Topic", href: "/learn", icon: BookOpen },
     { id: "upload", label: "Upload Content", href: "/upload", icon: UploadCloud },
     { id: "flashcards", label: "Flashcards", href: "/dashboard", icon: Layers }, // Route to dashboard for MVP focus
-    { id: "quizzes", label: "Quizzes", href: "/dashboard", icon: HelpCircle },
+    { id: "quizzes", label: "Quizzes", href: "/quiz", icon: HelpCircle },
     { id: "settings", label: "Settings", href: "/dashboard", icon: Settings },
   ];
 

@@ -1274,6 +1274,34 @@ export default function LearnTopicPage() {
                   
                   {renderAdaptiveLesson(lessonData)}
 
+                  {/* Generate Quiz CTA */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="pt-4 border-t border-white/5"
+                  >
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-violet-500/15 bg-violet-950/10">
+                      <div className="space-y-1">
+                        <p className="text-sm font-black text-white flex items-center gap-2">
+                          <Zap size={15} className="text-violet-400" />
+                          Ready to test your understanding?
+                        </p>
+                        <p className="text-xs text-zinc-500">
+                          Generate a personalized quiz on <span className="text-zinc-300 font-semibold">{topic}</span> based on your learning mode.
+                        </p>
+                      </div>
+                      <a
+                        href={`/quiz?topic=${encodeURIComponent(topic)}&mode=${level}`}
+                        className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 via-indigo-600 to-violet-600 text-white text-sm font-bold shadow-[0_0_20px_-3px_rgba(139,92,246,0.4)] border border-violet-500/20 hover:brightness-110 transition-all cursor-pointer"
+                      >
+                        <Award size={15} />
+                        Generate Quiz
+                        <ChevronRight size={14} />
+                      </a>
+                    </div>
+                  </motion.div>
+
                 </div>
 
                 {/* Right Column: AI Interactive Scratchpad */}
