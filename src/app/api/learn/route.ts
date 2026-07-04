@@ -204,6 +204,60 @@ function getSystemPrompt(level: string, topic: string, duration: string): string
 
   const config = matrix[level]?.[duration] || matrix["intermediate"]["10m"];
 
+  if (level === "beginner") {
+    return `You are a Senior Learning Scientist, Educational Psychologist, Prompt Engineer, and AI Product Designer.
+Your task is to teach the topic: "${topic}" using a combination of the selected Learning Mode: "beginner" and Available Duration: "${duration}".
+
+Pedagogical Matrix Objective:
+- Duration: ${duration} (Learning Objective: ${config.goal})
+- Target Cognitive Load: ${config.cognitiveLoad}
+- Mode: beginner
+- Teaching Strategy & Structure: ${config.structureDescription}
+
+You must respond with a JSON object matching this structure EXACTLY. Do not add comments or extra properties:
+{
+  "learning_goal": "${config.goal}",
+  "estimated_completion_time": "${duration}",
+  "lesson_structure": ${JSON.stringify(config.structure)},
+  "overview": "A clear, beautifully written introductory module text tailored to beginner level. Length: ${duration === "5m" ? "1-2 sentences" : duration === "10m" ? "2-3 sentences" : "4-5 sentences"}.",
+  "why_matters": "A compelling explanation of why understanding this topic matters in everyday life.",
+  "simple_explanation": "An extremely clear, plain-English explanation of the topic, breaking down any jargon.",
+  "real_life_analogy": "A rich, vivid real-world analogy to help the student build an intuitive mental model.",
+  "example": "A concrete, simple walkthrough example of how the topic applies in real life.",
+  "key_takeaways": [
+    "A concise, memorable takeaway rule, fact, or principle.",
+    "Another key takeaway.",
+    "A third key takeaway."
+  ],
+  "mini_quiz": [
+    {
+      "question": "A multiple-choice question testing the core intuition.",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "answer": "The EXACT string match of the correct option from the options array.",
+      "explanation": "A clear explanation of why this option is correct."
+    }
+  ],
+  "key_concepts": [
+    {
+      "title": "Concept Title",
+      "content": "A short, beginner-friendly conceptual explanation."
+    }
+  ]
+}
+
+Rules for this specific combination:
+- lesson_structure MUST match the array: ${JSON.stringify(config.structure)}
+- key_takeaways array: must contain exactly 3 clear takeaway statements.
+- mini_quiz array: ${config.quizRules}
+- key_concepts array: must contain brief concept summaries matching the takeaways to populate the student notes companion.
+- Ensure that the details and depth of explanations strictly match the duration:
+  - 5m: Ultra-short, high-level, awareness-only.
+  - 10m: Solid conceptual explanations.
+  - 20m: High detail with code setups and exercises.
+  - 30m: Rigorous, exhaustive, case-study scale.
+- The output must be raw JSON conforming to this schema. Do not wrap in markdown code blocks.`;
+  }
+
   return `You are a Senior Learning Scientist, Educational Psychologist, Prompt Engineer, and AI Product Designer.
 Your task is to teach the topic: "${topic}" using a combination of the selected Learning Mode: "${level}" and Available Duration: "${duration}".
 
@@ -269,61 +323,104 @@ Rules for this specific combination:
 - The output must be raw JSON conforming to this schema. Do not wrap in markdown code blocks.`;
 }
 
-function validateResponse(data: any) {
+function validateResponse(data: any, level: string) {
   if (!data || typeof data !== "object") {
     throw new Error("Response is not a valid JSON object");
   }
 
-  const requiredKeys = [
-    "learning_goal",
-    "estimated_completion_time",
-    "lesson_structure",
-    "overview",
-    "key_concepts",
-    "examples",
-    "practice_questions",
-    "quiz",
-    "summary"
-  ];
+  if (level === "beginner") {
+    const requiredKeys = [
+      "learning_goal",
+      "estimated_completion_time",
+      "lesson_structure",
+      "overview",
+      "why_matters",
+      "simple_explanation",
+      "real_life_analogy",
+      "example",
+      "key_takeaways",
+      "mini_quiz",
+      "key_concepts"
+    ];
 
-  for (const key of requiredKeys) {
-    if (data[key] === undefined) {
-      throw new Error(`Missing required key: ${key}`);
+    for (const key of requiredKeys) {
+      if (data[key] === undefined) {
+        throw new Error(`Missing required key for beginner: ${key}`);
+      }
     }
-  }
 
-  if (!Array.isArray(data.lesson_structure) || data.lesson_structure.length === 0) {
-    throw new Error("lesson_structure must be a non-empty array of strings");
-  }
-
-  if (!Array.isArray(data.key_concepts) || data.key_concepts.length === 0) {
-    throw new Error("key_concepts must be a non-empty array");
-  }
-  for (const concept of data.key_concepts) {
-    if (!concept.title || !concept.content) {
-      throw new Error("Invalid concept in key_concepts. Each concept must have 'title' and 'content'");
+    if (!Array.isArray(data.lesson_structure) || data.lesson_structure.length === 0) {
+      throw new Error("lesson_structure must be a non-empty array of strings");
     }
-  }
 
-  if (!Array.isArray(data.examples)) {
-    throw new Error("examples must be an array");
-  }
-  for (const ex of data.examples) {
-    if (!ex.title || !ex.scenario) {
-      throw new Error("Invalid example in examples. Each example must have 'title' and 'scenario'");
+    if (!Array.isArray(data.key_takeaways) || data.key_takeaways.length === 0) {
+      throw new Error("key_takeaways must be a non-empty array");
     }
-  }
 
-  if (!Array.isArray(data.practice_questions)) {
-    throw new Error("practice_questions must be an array");
-  }
+    if (!Array.isArray(data.mini_quiz) || data.mini_quiz.length === 0) {
+      throw new Error("mini_quiz must be a non-empty array");
+    }
+    for (const q of data.mini_quiz) {
+      if (!q.question || !Array.isArray(q.options) || q.options.length < 2 || !q.answer || !q.explanation) {
+        throw new Error("Invalid question in mini_quiz. Must have 'question', non-empty 'options', 'answer', and 'explanation'");
+      }
+    }
 
-  if (!Array.isArray(data.quiz)) {
-    throw new Error("quiz must be an array");
-  }
-  for (const q of data.quiz) {
-    if (!q.question || !Array.isArray(q.options) || q.options.length < 2 || !q.answer || !q.explanation) {
-      throw new Error("Invalid question in quiz. Must have 'question', non-empty 'options', 'answer', and 'explanation'");
+    if (!Array.isArray(data.key_concepts)) {
+      throw new Error("key_concepts must be an array");
+    }
+  } else {
+    const requiredKeys = [
+      "learning_goal",
+      "estimated_completion_time",
+      "lesson_structure",
+      "overview",
+      "key_concepts",
+      "examples",
+      "practice_questions",
+      "quiz",
+      "summary"
+    ];
+
+    for (const key of requiredKeys) {
+      if (data[key] === undefined) {
+        throw new Error(`Missing required key: ${key}`);
+      }
+    }
+
+    if (!Array.isArray(data.lesson_structure) || data.lesson_structure.length === 0) {
+      throw new Error("lesson_structure must be a non-empty array of strings");
+    }
+
+    if (!Array.isArray(data.key_concepts) || data.key_concepts.length === 0) {
+      throw new Error("key_concepts must be a non-empty array");
+    }
+    for (const concept of data.key_concepts) {
+      if (!concept.title || !concept.content) {
+        throw new Error("Invalid concept in key_concepts. Each concept must have 'title' and 'content'");
+      }
+    }
+
+    if (!Array.isArray(data.examples)) {
+      throw new Error("examples must be an array");
+    }
+    for (const ex of data.examples) {
+      if (!ex.title || !ex.scenario) {
+        throw new Error("Invalid example in examples. Each example must have 'title' and 'scenario'");
+      }
+    }
+
+    if (!Array.isArray(data.practice_questions)) {
+      throw new Error("practice_questions must be an array");
+    }
+
+    if (!Array.isArray(data.quiz)) {
+      throw new Error("quiz must be an array");
+    }
+    for (const q of data.quiz) {
+      if (!q.question || !Array.isArray(q.options) || q.options.length < 2 || !q.answer || !q.explanation) {
+        throw new Error("Invalid question in quiz. Must have 'question', non-empty 'options', 'answer', and 'explanation'");
+      }
     }
   }
 }
@@ -461,7 +558,7 @@ export async function POST(req: Request) {
       const parsedData = JSON.parse(cleanedText);
       
       // Perform strict output validation
-      validateResponse(parsedData);
+      validateResponse(parsedData, level);
 
       return NextResponse.json(parsedData);
     } catch (parseError: any) {
