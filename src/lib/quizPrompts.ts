@@ -328,13 +328,14 @@ ${config.avoidInstructions}
 
 General Rules:
 1. Every question must test UNDERSTANDING or REASONING — not rote memorization alone.
-2. All options must be plausible. Distractors should reflect common misconceptions or related-but-wrong ideas, not obviously wrong filler.
-3. The correct_answer field must be the EXACT string match of one entry in the options array.
-4. Explanations must be educational — tell the student WHY the answer is correct and what the common mistake is.
-5. For "true_false" type, options must be exactly ["True", "False"].
-6. For "interview" type, the explanation should include what a strong interview answer looks like.
-7. For "scenario" type, the question must describe a concrete situation before asking the question.
-8. Questions must be unique from each other — no two questions should test the same concept.
+2. ALL questions — regardless of type (mcq, interview, scenario, revision, true_false) — MUST have an "options" array with EXACTLY 4 entries. No exceptions. Even "interview" type questions must be formatted as multiple-choice with 4 options and one correct answer.
+3. All options must be plausible. Distractors should reflect common misconceptions or related-but-wrong ideas, not obviously wrong filler.
+4. The correct_answer field must be the EXACT string match of one entry in the options array.
+5. Explanations must be educational — tell the student WHY the answer is correct and what the common mistake is.
+6. For "true_false" type ONLY, options must be exactly ["True", "False"] (2 entries, not 4).
+7. For "interview" type, format as MCQ with 4 options. The explanation should include what a strong interview answer looks like.
+8. For "scenario" type, the question must describe a concrete situation before asking the question.
+9. Questions must be unique from each other — no two questions should test the same concept.
 
 Performance Insights Instructions:
 Based on the quiz content you are generating, also fill in the performance_insights_template:

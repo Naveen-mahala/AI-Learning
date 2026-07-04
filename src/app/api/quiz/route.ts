@@ -24,14 +24,38 @@ function validateQuizResponse(data: unknown, mode: QuizMode, duration: QuizDurat
   const validTypes = ["mcq", "true_false", "scenario", "interview", "revision"];
   for (let i = 0; i < (d.questions as unknown[]).length; i++) {
     const q = (d.questions as Record<string, unknown>[])[i];
+
     if (!q.question || typeof q.question !== "string") throw new Error(`Question ${i + 1}: missing 'question'`);
+
+    // Normalise type
     if (!q.type || !validTypes.includes(q.type as string)) q.type = "mcq";
-    if (!Array.isArray(q.options) || (q.options as unknown[]).length < 2) throw new Error(`Question ${i + 1}: 'options' must have at least 2 entries`);
+
+    // Auto-repair missing or malformed options instead of crashing
+    if (!Array.isArray(q.options) || (q.options as unknown[]).length < 2) {
+      // If it's interview/scenario type without options, build placeholder options
+      // using the correct_answer if present, so the question still renders
+      const ca = typeof q.correct_answer === "string" && q.correct_answer.length > 0
+        ? q.correct_answer
+        : "Unable to determine";
+      q.options = [
+        ca,
+        "This option was not provided by the AI",
+        "This option was not provided by the AI",
+        "This option was not provided by the AI",
+      ];
+      q.correct_answer = ca;
+      // Force type to mcq so the UI renders it as a standard question
+      q.type = "mcq";
+    }
+
     if (!q.correct_answer || typeof q.correct_answer !== "string") throw new Error(`Question ${i + 1}: missing 'correct_answer'`);
+
+    // Ensure correct_answer is in options (case-insensitive fallback)
     if (!(q.options as string[]).includes(q.correct_answer as string)) {
       const match = (q.options as string[]).find((o) => o.toLowerCase().trim() === (q.correct_answer as string).toLowerCase().trim());
       if (match) { q.correct_answer = match; } else throw new Error(`Question ${i + 1}: correct_answer not found in options`);
     }
+
     if (!q.explanation || typeof q.explanation !== "string") throw new Error(`Question ${i + 1}: missing 'explanation'`);
   }
 

@@ -3,14 +3,16 @@
 import React, { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Clock, Key, AlertTriangle, RotateCcw, Search, Zap } from "lucide-react";
+import { Sparkles, Brain, Key, AlertTriangle, RotateCcw, Search, Zap } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/Button";
 import { GlowCard } from "@/components/Card";
 import { QuizCard, QuizProgress } from "@/components/QuizCard";
 import { QuizResult } from "@/components/QuizResult";
+import { QuizTimer } from "@/components/QuizTimer";
 import { QuizSkeleton } from "@/components/QuizSkeleton";
+import { QuizTimer } from "@/components/QuizTimer";
 import { useQuizStore } from "@/lib/store";
 import { modeConfig, durationConfig, calculateXP, getBadge } from "@/lib/quizPrompts";
 import { cn } from "@/lib/utils";
@@ -182,6 +184,18 @@ function QuizPageInner() {
   }, []);
   const handleNewQuiz = useCallback(() => { resetQuiz(); setLocalInput(""); }, [resetQuiz]);
   const handleLearnMore = useCallback(() => router.push(`/learn?topic=${encodeURIComponent(quizTopic)}`), [router, quizTopic]);
+  const handleTimeUp = useCallback(() => {
+    if (!quizData) return;
+    const answers: QuizAnswer[] = quizData.questions.map((q, i) => ({
+      questionIndex: i, selectedOption: userAnswers[i] ?? "", isCorrect: (userAnswers[i] ?? "") === q.correct_answer,
+    }));
+    const correct = answers.filter((a) => a.isCorrect).length;
+    const score = Math.round((correct / quizData.questions.length) * 100);
+    setQuizResult({ totalQuestions: quizData.questions.length, correctAnswers: correct, score,
+      accuracy: `${score}%`, answers, xpEarned: calculateXP(score, quizMode, quizDuration),
+      badge: getBadge(score, quizMode), completedAt: new Date().toISOString() } as QuizResultType);
+    setQuizPhase("results");
+  }, [quizData, userAnswers, quizMode, quizDuration, setQuizResult, setQuizPhase]);
   const handleSaveKey = () => { setQuizApiKey(tempKey); setShowKeyModal(false); setTempKey(""); };
 
   const activeCfg = modeConfig[quizMode];
