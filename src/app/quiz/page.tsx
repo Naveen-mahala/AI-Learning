@@ -3,7 +3,7 @@
 import React, { useState, useCallback, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Brain, Key, AlertTriangle, RotateCcw, Search, Zap } from "lucide-react";
+import { Sparkles, Brain, Key, AlertTriangle, RotateCcw, Search, Zap, Clock } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Sidebar } from "@/components/Sidebar";
 import { Button } from "@/components/Button";
@@ -12,7 +12,6 @@ import { QuizCard, QuizProgress } from "@/components/QuizCard";
 import { QuizResult } from "@/components/QuizResult";
 import { QuizTimer } from "@/components/QuizTimer";
 import { QuizSkeleton } from "@/components/QuizSkeleton";
-import { QuizTimer } from "@/components/QuizTimer";
 import { useQuizStore } from "@/lib/store";
 import { modeConfig, durationConfig, calculateXP, getBadge } from "@/lib/quizPrompts";
 import { cn } from "@/lib/utils";
@@ -80,7 +79,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ mode, duration, onModeChange,
     </div>
     <div className="space-y-3">
       <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Quiz Duration</p>
-      <div className="grid grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {DURATIONS.map((d) => {
           const dcfg = durationConfig[d]; const active = duration === d; const mcfg = modeConfig[mode];
           return (
@@ -205,7 +204,7 @@ function QuizPageInner() {
   const isLastQuestion = quizData ? currentQuestionIndex === quizData.questions.length - 1 : false;
 
   return (
-    <div className="flex min-h-screen bg-[#030303]">
+    <div className="min-h-screen bg-[#030303] text-zinc-100 flex flex-col md:flex-row font-sans">
       <Sidebar activeItem="quizzes" />
       <AnimatePresence>{showKeyModal && <KeyModal value={tempKey} onChange={setTempKey} onSave={handleSaveKey} onClose={() => { setShowKeyModal(false); setTempKey(""); }} />}</AnimatePresence>
       <main className="flex-1 min-h-screen overflow-y-auto w-full min-w-0">
@@ -319,10 +318,13 @@ function QuizPageInner() {
                         </span>
                       </div>
                     </div>
-                    <button onClick={handleNewQuiz}
-                      className="self-start shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer font-bold">
-                      <RotateCcw size={11} /> Reset
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0 self-start xs:self-center">
+                      <QuizTimer duration={quizDuration} mode={quizMode} isRunning={quizPhase === "active"} onTimeUp={handleTimeUp} />
+                      <button onClick={handleNewQuiz}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-800 bg-zinc-900/60 text-[10px] text-zinc-400 hover:text-white hover:border-zinc-700 transition-all cursor-pointer font-bold h-[38px]">
+                        <RotateCcw size={11} /> Reset
+                      </button>
+                    </div>
                   </div>
                   <QuizProgress current={currentQuestionIndex + 1} total={quizData.questions.length} mode={quizMode} />
                 </div>
