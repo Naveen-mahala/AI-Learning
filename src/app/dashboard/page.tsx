@@ -12,7 +12,8 @@ import {
   Play,
   ArrowRight,
   Clock,
-  BarChart2
+  BarChart2,
+  Network
 } from "lucide-react";
 import { Sidebar } from "@/components/Sidebar";
 import { Card } from "@/components/Card";
@@ -79,6 +80,14 @@ export default function DashboardPage() {
       href: "/flashcards",
       color: "emerald",
       badge: "Retain",
+    },
+    {
+      title: "Mind Maps",
+      description: "Convert learning topics into interactive, animated visual knowledge graphs.",
+      icon: Network,
+      href: "/mindmap",
+      color: "violet",
+      badge: "Visual Graph",
     },
     {
       title: "Upload Content",

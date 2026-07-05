@@ -12,12 +12,12 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
-    const result = await sql`
+    const result = (await sql`
       SELECT
         now()            AS server_time,
         version()        AS pg_version,
         current_database() AS database_name
-    `;
+    `) as any;
 
     return NextResponse.json({
       status: "connected",

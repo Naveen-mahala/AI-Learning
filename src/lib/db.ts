@@ -1,7 +1,16 @@
 import { neon } from "@neondatabase/serverless";
 
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL environment variable is not set");
+// Lazily initialize the neon client to avoid build/compilation errors when DATABASE_URL is not set.
+let sqlInstance: any = null;
+
+function getSql() {
+  if (!sqlInstance) {
+    if (!process.env.DATABASE_URL) {
+      throw new Error("DATABASE_URL environment variable is not set. Please configure it in your environment variables.");
+    }
+    sqlInstance = neon(process.env.DATABASE_URL);
+  }
+  return sqlInstance;
 }
 
 /**
@@ -16,7 +25,9 @@ if (!process.env.DATABASE_URL) {
  * The tagged-template syntax automatically parameterises values,
  * so you never need to sanitise inputs manually.
  */
-export const sql = neon(process.env.DATABASE_URL);
+export const sql = ((strings: TemplateStringsArray, ...values: any[]) => {
+  return getSql()(strings, ...values);
+}) as ReturnType<typeof neon>;
 
 /**
  * Helper for running a quick connectivity check.

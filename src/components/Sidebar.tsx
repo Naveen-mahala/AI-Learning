@@ -14,12 +14,13 @@ import {
   LogOut, 
   Menu, 
   X,
-  ChevronRight
+  ChevronRight,
+  Network
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
-  activeItem: "dashboard" | "learn" | "upload" | "flashcards" | "quizzes" | "settings";
+  activeItem: "dashboard" | "learn" | "upload" | "flashcards" | "quizzes" | "settings" | "mindmaps";
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
@@ -28,6 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
   const menuItems = [
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { id: "learn", label: "Learn Topic", href: "/learn", icon: BookOpen },
+    { id: "mindmaps", label: "Mind Maps", href: "/mindmap", icon: Network },
     { id: "upload", label: "Upload Content", href: "/upload", icon: UploadCloud },
     { id: "flashcards", label: "Flashcards", href: "/flashcards", icon: Layers },
     { id: "quizzes", label: "Quizzes", href: "/quiz", icon: HelpCircle },
