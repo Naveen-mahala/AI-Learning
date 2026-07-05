@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Sparkles, Lightbulb, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Flashcard as FlashcardType } from "@/lib/flashcardStore";
+import { cn } from "@/utils/cn";
+import { Flashcard as FlashcardType } from "@/stores/flashcard-store";
 
 interface FlashcardProps {
   card: FlashcardType;

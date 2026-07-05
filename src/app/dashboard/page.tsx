@@ -15,9 +15,9 @@ import {
   BarChart2,
   Network
 } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 interface RecentTopic {
   id: string;

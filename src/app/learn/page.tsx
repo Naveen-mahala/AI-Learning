@@ -27,10 +27,10 @@ import {
   Zap
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { Sidebar } from "@/components/Sidebar";
-import { Card, GlowCard } from "@/components/Card";
-import { Button } from "@/components/Button";
-import { useLearningStore } from "@/lib/store";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Card, GlowCard } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { useLearningStore } from "@/stores/learning-store";
 
 function parseMarkdown(text: string): React.ReactNode {
   if (!text) return null;

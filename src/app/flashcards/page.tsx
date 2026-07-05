@@ -20,11 +20,11 @@ import {
   Brain,
   Terminal
 } from "lucide-react";
-import { Sidebar } from "@/components/Sidebar";
-import { Button } from "@/components/Button";
-import { CardStack } from "@/components/CardStack";
-import { useFlashcardStore } from "@/lib/flashcardStore";
-import { cn } from "@/lib/utils";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Button } from "@/components/ui/Button";
+import { CardStack } from "@/features/flashcards/components/CardStack";
+import { useFlashcardStore } from "@/stores/flashcard-store";
+import { cn } from "@/utils/cn";
 
 function getTopicInsights(topicName: string) {
   const normalized = topicName.toLowerCase().trim();

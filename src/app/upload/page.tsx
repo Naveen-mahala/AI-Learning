@@ -13,9 +13,9 @@ import {
   AlertTriangle
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { Sidebar } from "@/components/Sidebar";
-import { Card } from "@/components/Card";
-import { Button } from "@/components/Button";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
 
 interface UploadedFile {
   id: string;

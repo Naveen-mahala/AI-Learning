@@ -17,10 +17,10 @@ import {
   ArrowRight,
   Map
 } from "lucide-react";
-import { Button } from "@/components/Button";
-import { GlowCard } from "@/components/Card";
-import { AccordionItem } from "@/components/Accordion";
-import { Tabs } from "@/components/Tabs";
+import { Button } from "@/components/ui/Button";
+import { GlowCard } from "@/components/ui/Card";
+import { AccordionItem } from "@/components/ui/Accordion";
+import { Tabs } from "@/components/ui/Tabs";
 
 // CountUp Component for Stats
 interface CountUpProps {

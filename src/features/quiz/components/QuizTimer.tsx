@@ -3,8 +3,8 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Timer } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { QuizMode, QuizDuration } from "@/lib/store";
+import { cn } from "@/utils/cn";
+import type { QuizMode, QuizDuration } from "@/stores/learning-store";
 
 // ─── Duration → seconds map ───────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Flashcard } from "./Flashcard";
-import { Flashcard as FlashcardType } from "@/lib/flashcardStore";
+import { Flashcard as FlashcardType } from "@/stores/flashcard-store";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface CardStackProps {

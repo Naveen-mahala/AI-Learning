@@ -3,8 +3,8 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Sparkles, AlertTriangle, Lightbulb, GitFork, Loader2 } from "lucide-react";
-import { useMindMapStore } from "@/lib/mindMapStore";
-import { Button } from "@/components/Button";
+import { useMindMapStore } from "@/stores/mindmap-store";
+import { Button } from "@/components/ui/Button";
 
 export const KnowledgePanel: React.FC = () => {
   const { 

@@ -12,10 +12,10 @@ import {
   RotateCcw,
   Brain,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/Button";
-import type { SmartQuizQuestion, QuizMode } from "@/lib/store";
-import { modeConfig } from "@/lib/quizPrompts";
+import { cn } from "@/utils/cn";
+import { Button } from "@/components/ui/Button";
+import type { SmartQuizQuestion, QuizMode } from "@/stores/learning-store";
+import { modeConfig } from "@/features/quiz/constants/quizPrompts";
 
 const OPTION_LABELS = ["A", "B", "C", "D", "E"];
 

@@ -32,14 +32,14 @@ import {
   Plus
 } from "lucide-react";
 
-import { Sidebar } from "@/components/Sidebar";
-import { Button } from "@/components/Button";
-import { useMindMapStore, LearningMode } from "@/lib/mindMapStore";
-import { CustomNode } from "@/components/mindmap/CustomNode";
-import { AnimatedEdge } from "@/components/mindmap/AnimatedEdge";
-import { LoadingScreen } from "@/components/mindmap/LoadingScreen";
-import { KnowledgePanel } from "@/components/mindmap/KnowledgePanel";
-import { LayoutType } from "@/lib/layoutEngine";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Button } from "@/components/ui/Button";
+import { useMindMapStore, LearningMode } from "@/stores/mindmap-store";
+import { CustomNode } from "@/features/mind-map/components/CustomNode";
+import { AnimatedEdge } from "@/features/mind-map/components/AnimatedEdge";
+import { LoadingScreen } from "@/features/mind-map/components/LoadingScreen";
+import { KnowledgePanel } from "@/features/mind-map/components/KnowledgePanel";
+import { LayoutType } from "@/features/mind-map/utils/layoutEngine";
 
 // Register custom React Flow components
 const nodeTypes = {

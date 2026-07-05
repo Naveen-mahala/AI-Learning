@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { Node, Edge } from "@xyflow/react";
-import { layoutNodes, LayoutType } from "./layoutEngine";
+import { layoutNodes, LayoutType } from "@/features/mind-map/utils/layoutEngine";
 
 export type LearningMode = "beginner" | "intermediate" | "interview" | "revision";
 

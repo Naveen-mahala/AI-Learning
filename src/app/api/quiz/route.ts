@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildQuizSystemPrompt, getQuizConfig } from "@/lib/quizPrompts";
-import type { QuizMode, QuizDuration, SmartQuizData } from "@/lib/store";
+import { buildQuizSystemPrompt, getQuizConfig } from "@/features/quiz/constants/quizPrompts";
+import type { QuizMode, QuizDuration, SmartQuizData } from "@/stores/learning-store";
 
 export const dynamic = "force-dynamic";
 

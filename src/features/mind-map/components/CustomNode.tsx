@@ -4,8 +4,8 @@ import React, { memo } from "react";
 import { Handle, Position, NodeProps } from "@xyflow/react";
 import { motion } from "framer-motion";
 import { Sparkles, HelpCircle, Layers, Code, Play } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useMindMapStore } from "@/lib/mindMapStore";
+import { cn } from "@/utils/cn";
+import { useMindMapStore } from "@/stores/mindmap-store";
 
 export const CustomNode = memo(({ id, data, selected }: NodeProps) => {
   const type = data.type as "root" | "concept" | "sub_concept" | "example" | "application";

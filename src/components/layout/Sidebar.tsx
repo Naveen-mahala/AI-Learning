@@ -17,7 +17,7 @@ import {
   ChevronRight,
   Network
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/utils/cn";
 
 interface SidebarProps {
   activeItem: "dashboard" | "learn" | "upload" | "flashcards" | "quizzes" | "settings" | "mindmaps";

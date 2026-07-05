@@ -1,4 +1,4 @@
-import type { QuizMode, QuizDuration, QuizDifficulty, QuizType } from "./store";
+import type { QuizMode, QuizDuration, QuizDifficulty, QuizType } from "@/stores/learning-store";
 
 // ─── Quiz generation configuration matrix ────────────────────────────────────
 

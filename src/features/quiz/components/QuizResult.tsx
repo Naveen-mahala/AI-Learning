@@ -8,11 +8,11 @@ import {
   ChevronRight, Star, Flame,
 } from "lucide-react";
 import confetti from "canvas-confetti";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/Button";
-import { GlowCard } from "@/components/Card";
-import type { QuizResult as QuizResultData, SmartQuizData, QuizMode } from "@/lib/store";
-import { modeConfig } from "@/lib/quizPrompts";
+import { cn } from "@/utils/cn";
+import { Button } from "@/components/ui/Button";
+import { GlowCard } from "@/components/ui/Card";
+import type { QuizResult as QuizResultData, SmartQuizData, QuizMode } from "@/stores/learning-store";
+import { modeConfig } from "@/features/quiz/constants/quizPrompts";
 
 // ─── Score ring — responsive size ─────────────────────────────────────────────
 

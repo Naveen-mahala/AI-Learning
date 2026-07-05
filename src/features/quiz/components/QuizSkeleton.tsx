@@ -2,10 +2,10 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Skeleton } from "@/components/Skeleton";
-import { cn } from "@/lib/utils";
-import type { QuizMode } from "@/lib/store";
-import { modeConfig } from "@/lib/quizPrompts";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { cn } from "@/utils/cn";
+import type { QuizMode } from "@/stores/learning-store";
+import { modeConfig } from "@/features/quiz/constants/quizPrompts";
 
 const LOADING_STEPS = [
   { label: "Analyzing topic",               sub: "Building concept map…" },
