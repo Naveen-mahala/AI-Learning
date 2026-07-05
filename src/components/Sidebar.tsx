@@ -29,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeItem }) => {
     { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { id: "learn", label: "Learn Topic", href: "/learn", icon: BookOpen },
     { id: "upload", label: "Upload Content", href: "/upload", icon: UploadCloud },
-    { id: "flashcards", label: "Flashcards", href: "/dashboard", icon: Layers }, // Route to dashboard for MVP focus
+    { id: "flashcards", label: "Flashcards", href: "/flashcards", icon: Layers },
     { id: "quizzes", label: "Quizzes", href: "/quiz", icon: HelpCircle },
     { id: "settings", label: "Settings", href: "/dashboard", icon: Settings },
   ];

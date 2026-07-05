@@ -114,14 +114,8 @@ function QuizPageInner() {
   const [tempKey, setTempKey] = useState("");
   const [localInput, setLocalInput] = useState(() => searchParams.get("topic") ?? quizTopic);
 
-  React.useEffect(() => {
-    const m = searchParams.get("mode") as QuizMode | null;
-    if (m && MODES.includes(m)) setQuizMode(m);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const generateQuiz = useCallback(async () => {
-    const topic = localInput.trim();
+  const generateQuiz = useCallback(async (overrideTopic?: string) => {
+    const topic = (overrideTopic || localInput).trim();
     if (!topic) return;
     // Key is optional — API falls back to .env.local automatically
     setQuizTopic(topic); setQuizError(null); setQuizData(null); setQuizResult(null);
@@ -144,6 +138,19 @@ function QuizPageInner() {
     } finally { setGeneratingQuiz(false); setQuizLoadingStep(0); }
   }, [localInput, quizApiKey, quizMode, quizDuration, setQuizTopic, setQuizError, setQuizData,
       setQuizResult, setCurrentQuestion, setGeneratingQuiz, setQuizLoadingStep, setQuizPhase]);
+
+  React.useEffect(() => {
+    const m = searchParams.get("mode") as QuizMode | null;
+    if (m && MODES.includes(m)) setQuizMode(m);
+
+    const auto = searchParams.get("autostart") === "true";
+    const topicParam = searchParams.get("topic");
+    if (auto && topicParam) {
+      setLocalInput(topicParam);
+      generateQuiz(topicParam);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, generateQuiz]);
 
   const handleSelect = useCallback((option: string) => {
     if (submittedQuestions[currentQuestionIndex]) return;
@@ -284,7 +291,7 @@ function QuizPageInner() {
                   </span>
                 </motion.div>
                 <Button variant={quizMode === "beginner" ? "emerald" : "gradient"} size="lg"
-                  className="w-full font-black text-sm" disabled={!localInput.trim()} onClick={generateQuiz}
+                  className="w-full font-black text-sm" disabled={!localInput.trim()} onClick={() => generateQuiz()}
                   leftIcon={<Sparkles size={16} />}>
                   Generate Quiz
                 </Button>
