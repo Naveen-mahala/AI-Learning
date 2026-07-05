@@ -151,7 +151,7 @@ export default function UploadPage() {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               resolve(JSON.parse(xhr.responseText));
-            } catch (e) {
+            } catch {
               reject(new Error("Invalid response format from upload server."));
             }
           } else {
