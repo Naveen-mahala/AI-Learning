@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -9,7 +9,8 @@ import {
   CheckCircle, 
   Trash2, 
   ChevronRight, 
-  Database
+  Database,
+  AlertTriangle
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Sidebar } from "@/components/Sidebar";
@@ -23,6 +24,7 @@ interface UploadedFile {
   size: string;
   status: "Processed" | "Analyzing..." | "Failed";
   updatedAt: string;
+  url?: string;
 }
 
 export default function UploadPage() {
@@ -30,34 +32,62 @@ export default function UploadPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadFileName, setUploadFileName] = useState("");
   const [uploadStatusMsg, setUploadStatusMsg] = useState("");
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [files, setFiles] = useState<UploadedFile[]>([
-    {
-      id: "file-1",
-      title: "Intro_to_Deep_Learning.pdf",
-      type: "PDF Document",
-      size: "4.8 MB",
-      status: "Processed",
-      updatedAt: "2 hours ago",
-    },
-    {
-      id: "file-2",
-      title: "Linear_Regression_Notes.docx",
-      type: "Word Document",
-      size: "1.2 MB",
-      status: "Processed",
-      updatedAt: "Yesterday",
-    },
-    {
-      id: "file-3",
-      title: "Database_Normal_Forms.ppt",
-      type: "PowerPoint Presentation",
-      size: "8.5 MB",
-      status: "Processed",
-      updatedAt: "3 days ago",
-    },
-  ]);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [hasLoadedSavedFiles, setHasLoadedSavedFiles] = useState(false);
+
+  // Load files from local storage on mount to prevent hydration mismatch
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("ai-learning-uploaded-files");
+      if (saved) {
+        try {
+          setFiles(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse saved files", e);
+        }
+      } else {
+        const initialMock: UploadedFile[] = [
+          {
+            id: "file-1",
+            title: "Intro_to_Deep_Learning.pdf",
+            type: "PDF Document",
+            size: "4.8 MB",
+            status: "Processed",
+            updatedAt: "2 hours ago",
+          },
+          {
+            id: "file-2",
+            title: "Linear_Regression_Notes.docx",
+            type: "Word Document",
+            size: "1.2 MB",
+            status: "Processed",
+            updatedAt: "Yesterday",
+          },
+          {
+            id: "file-3",
+            title: "Database_Normal_Forms.ppt",
+            type: "PowerPoint Presentation",
+            size: "8.5 MB",
+            status: "Processed",
+            updatedAt: "3 days ago",
+          },
+        ];
+        setFiles(initialMock);
+        localStorage.setItem("ai-learning-uploaded-files", JSON.stringify(initialMock));
+      }
+      setHasLoadedSavedFiles(true);
+    }
+  }, []);
+
+  // Save files to local storage when state changes
+  useEffect(() => {
+    if (hasLoadedSavedFiles && typeof window !== "undefined") {
+      localStorage.setItem("ai-learning-uploaded-files", JSON.stringify(files));
+    }
+  }, [files, hasLoadedSavedFiles]);
 
   // Drag and drop handlers
   const handleDrag = (e: React.DragEvent) => {
@@ -77,60 +107,104 @@ export default function UploadPage() {
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
-      triggerUploadSim(file.name, file.size);
+      handleUploadFile(file);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.value && e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      triggerUploadSim(file.name, file.size);
+      handleUploadFile(file);
     }
   };
 
-  const triggerUploadSim = (name: string, sizeBytes: number) => {
+  const handleUploadFile = async (file: File) => {
     if (uploadProgress !== null) return;
-    setUploadFileName(name);
+    setUploadFileName(file.name);
     setUploadProgress(0);
-    setUploadStatusMsg("Uploading file buffer...");
+    setUploadError(null);
+    setUploadStatusMsg("Initializing secure Cloudinary upload connection...");
 
-    const sizeFormatted = (sizeBytes / (1024 * 1024)).toFixed(1) + " MB";
+    const sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + " MB";
 
-    // Progressive upload tracker
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // XMLHttp Request to track exact upload progress
+      const xhr = new XMLHttpRequest();
       
-      if (progress === 40) {
-        setUploadStatusMsg("Extracting semantic document text...");
-      } else if (progress === 70) {
-        setUploadStatusMsg("Compressing notes and compiling study items...");
-      } else if (progress >= 100) {
-        clearInterval(interval);
-        setTimeout(() => {
-          confetti({
-            particleCount: 60,
-            spread: 50,
-            origin: { y: 0.8 },
-            colors: ["#8b5cf6", "#6366f1", "#10b981"]
-          });
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(Math.min(percentComplete, 90)); // cap at 90% until server finishes processing
+            if (percentComplete < 50) {
+              setUploadStatusMsg("Uploading file buffer to Cloudinary...");
+            } else {
+              setUploadStatusMsg("Processing asset and extracting document structures...");
+            }
+          }
+        });
 
-          // Add to files table
-          const newFile: UploadedFile = {
-            id: `file-${Date.now()}`,
-            title: name,
-            type: name.split(".").pop()?.toUpperCase() + " Document" || "Text Document",
-            size: sizeFormatted,
-            status: "Processed",
-            updatedAt: "Just now",
-          };
-          setFiles((prev) => [newFile, ...prev]);
-          setUploadProgress(null);
-          setUploadFileName("");
-        }, 800);
-      }
-    }, 250);
+        xhr.addEventListener("load", () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(JSON.parse(xhr.responseText));
+            } catch (e) {
+              reject(new Error("Invalid response format from upload server."));
+            }
+          } else {
+            try {
+              const errData = JSON.parse(xhr.responseText);
+              reject(new Error(errData.error || "Upload failed"));
+            } catch {
+              reject(new Error(`Server error (${xhr.status})`));
+            }
+          }
+        });
+
+        xhr.addEventListener("error", () => reject(new Error("Network upload error")));
+        xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+
+        xhr.open("POST", "/api/upload");
+        xhr.send(formData);
+      });
+
+      const result = await uploadPromise;
+
+      setUploadProgress(100);
+      setUploadStatusMsg("Optimized compiling complete!");
+
+      setTimeout(() => {
+        confetti({
+          particleCount: 60,
+          spread: 50,
+          origin: { y: 0.8 },
+          colors: ["#8b5cf6", "#6366f1", "#10b981"]
+        });
+
+        const newFile: UploadedFile = {
+          id: result.publicId || `file-${Date.now()}`,
+          title: result.title || file.name,
+          type: (result.title || file.name).split(".").pop()?.toUpperCase() + " Document" || "Text Document",
+          size: sizeFormatted,
+          status: "Processed",
+          updatedAt: "Just now",
+          url: result.url,
+        };
+
+        setFiles((prev) => [newFile, ...prev]);
+        setUploadProgress(null);
+        setUploadFileName("");
+      }, 850);
+
+    } catch (err: any) {
+      console.error(err);
+      setUploadError(err.message || "An unexpected error occurred during upload");
+      setUploadProgress(null);
+      setUploadFileName("");
+    }
   };
 
   const handleDeleteFile = (id: string) => {
@@ -154,6 +228,30 @@ export default function UploadPage() {
             <p className="text-zinc-500 text-xs sm:text-sm">Compress textbooks, slides, and files into AI-guided summaries.</p>
           </div>
         </div>
+
+        {/* ERROR BANNER */}
+        <AnimatePresence>
+          {uploadError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-start gap-3 p-4 rounded-xl border border-red-500/20 bg-red-950/15"
+            >
+              <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <h4 className="text-sm font-bold text-red-200">Upload Failed</h4>
+                <p className="text-xs text-red-300/80 leading-relaxed">{uploadError}</p>
+              </div>
+              <button 
+                onClick={() => setUploadError(null)}
+                className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* UPLOAD BOX CARD */}
         <Card interactive={false} className="border-white/5">
@@ -261,7 +359,18 @@ export default function UploadPage() {
                             <div className="h-8 w-8 rounded bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
                               <FileText size={16} className="text-violet-400" />
                             </div>
-                            <span className="truncate max-w-xs">{file.title}</span>
+                            {file.url ? (
+                              <a 
+                                href={file.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="truncate max-w-xs hover:text-violet-400 hover:underline transition-colors"
+                              >
+                                {file.title}
+                              </a>
+                            ) : (
+                              <span className="truncate max-w-xs">{file.title}</span>
+                            )}
                           </div>
                         </td>
                         {/* Format / Type */}
