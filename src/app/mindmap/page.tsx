@@ -264,7 +264,7 @@ export default function MindMapPage() {
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-violet-500/20 bg-violet-500/5 text-violet-400 text-xs font-semibold"
                   >
                     <Sparkles size={12} className="animate-pulse" />
-                    Day 6: Knowledge Graph System
+                    Interactive Knowledge Graph
                   </motion.div>
                   <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">
                     AI Mind Map Generator

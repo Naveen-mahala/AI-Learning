@@ -225,7 +225,7 @@ function QuizPageInner() {
               </div>
               <div>
                 <h1 className="text-sm font-black text-white tracking-tight">AI Smart Quiz Engine</h1>
-                <p className="text-[10px] text-zinc-500">Day 4 · Personalized Assessment</p>
+                <p className="text-[10px] text-zinc-500">Personalized Assessment Engine</p>
               </div>
             </div>
             <button onClick={() => { setTempKey(quizApiKey); setShowKeyModal(true); }}
