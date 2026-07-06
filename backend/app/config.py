@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = Field(default="")
     CLOUDINARY_API_SECRET: str = Field(default="")
     
+    GEMINI_API_KEY: str = Field(default="")
+    OPENROUTER_API_KEY: str = Field(default="")
+    GROQ_API_KEY: str = Field(default="")
+    
     class Config:
         extra = "ignore"
 

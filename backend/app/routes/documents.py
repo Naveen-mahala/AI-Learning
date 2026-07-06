@@ -1,7 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from app.database import get_db
 from app.repositories.document_repo import DocumentRepository
@@ -10,8 +10,10 @@ from app.services.cloudinary_service import CloudinaryService
 from app.schemas.document import (
     DocumentResponse, 
     DocumentDetailResponse, 
-    DocumentUploadResponse
+    DocumentUploadResponse,
+    DocumentSummaryResponse
 )
+from app.services.ai_service import AIManager, AIProviderError
 
 logger = logging.getLogger(__name__)
 
@@ -157,3 +159,81 @@ def delete_document(id: str, db: Session = Depends(get_db)):
         )
          
     return {"message": "Document deleted successfully"}
+
+
+@router.post("/api/document/{id}/generate-summary", response_model=DocumentSummaryResponse)
+@router.post("/api/documents/{id}/generate-summary", response_model=DocumentSummaryResponse)
+def generate_summary(id: str, provider: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Retrieves the extracted document text and triggers AI-based structured learning package generation.
+    Stores the package in the database and returns it.
+    """
+    doc = DocumentRepository.get_document(db, id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID {id} not found."
+        )
+
+    if not doc.contents or not doc.contents[0].raw_text:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot generate summary: No extracted text content is associated with this document."
+        )
+
+    raw_text = doc.contents[0].raw_text
+
+    try:
+        # Step-by-step progress logging in database
+        DocumentRepository.log_processing_step(db, id, "processing", "Smart Summary Generation Triggered.")
+        
+        # Invoke AI summary generator
+        summary_data = AIManager.generate_summary(doc.title, raw_text, provider_name=provider)
+        
+        # Resolve model name used
+        actual_provider = AIManager.get_provider(provider)
+        model_name = type(actual_provider).__name__.replace("Provider", "")
+
+        # Save to DB
+        db_summary = DocumentRepository.create_or_update_document_summary(
+            db=db,
+            doc_id=id,
+            summary_json=summary_data,
+            learning_time="10 minutes",
+            model_name=model_name
+        )
+        
+        DocumentRepository.log_processing_step(db, id, "completed", "Smart Summary Generated successfully.")
+        
+        return db_summary
+        
+    except AIProviderError as pe:
+        logger.error(f"AI provider failed: {str(pe)}")
+        DocumentRepository.log_processing_step(db, id, "failed", f"Summary generation failed: {str(pe)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"AI Service Failure: {str(pe)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error during summary generation: {str(e)}")
+        DocumentRepository.log_processing_step(db, id, "failed", f"Unexpected summary error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"An unexpected error occurred: {str(e)}"
+        )
+
+
+@router.get("/api/document/{id}/summary", response_model=DocumentSummaryResponse)
+@router.get("/api/documents/{id}/summary", response_model=DocumentSummaryResponse)
+def get_summary(id: str, db: Session = Depends(get_db)):
+    """
+    Retrieves the saved summary package for a document.
+    """
+    summary = DocumentRepository.get_document_summary(db, id)
+    if not summary:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Smart summary not found for document {id}. Please generate it first."
+        )
+    return summary
+

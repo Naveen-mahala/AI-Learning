@@ -16,7 +16,9 @@ import {
   Loader2,
   Trash2,
   ExternalLink,
-  Info
+  Info,
+  Sparkles,
+  CheckCircle
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/Card";
@@ -58,11 +60,88 @@ export default function DocumentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Smart Summary States
+  const [hasSummary, setHasSummary] = useState(false);
+  const [checkingSummary, setCheckingSummary] = useState(true);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [summaryStep, setSummaryStep] = useState(0);
+
+  const summarySteps = [
+    "Reading Document",
+    "Understanding Concepts",
+    "Finding Key Topics",
+    "Building Learning Experience",
+    "Creating Revision Sheet",
+    "Generating Questions",
+    "Completed"
+  ];
+
   useEffect(() => {
     if (id) {
       fetchDocumentDetail();
+      checkSummaryExists();
     }
   }, [id]);
+
+  const checkSummaryExists = async () => {
+    try {
+      setCheckingSummary(true);
+      const res = await fetch(`${API_URL}/api/document/${id}/summary`);
+      if (res.ok) {
+        setHasSummary(true);
+      } else {
+        setHasSummary(false);
+      }
+    } catch (err) {
+      console.error("Error checking summary status:", err);
+      setHasSummary(false);
+    } finally {
+      setCheckingSummary(false);
+    }
+  };
+
+  const handleGenerateSummary = async () => {
+    setSummaryLoading(true);
+    setSummaryError(null);
+    setSummaryStep(0);
+
+    // Progressive step loader loop
+    const intervalTime = 3000;
+    const timer = setInterval(() => {
+      setSummaryStep((prev) => {
+        if (prev < 5) return prev + 1;
+        return prev;
+      });
+    }, intervalTime);
+
+    try {
+      const res = await fetch(`${API_URL}/api/document/${id}/generate-summary`, {
+        method: "POST"
+      });
+
+      clearInterval(timer);
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Failed to generate smart summary.");
+      }
+
+      setSummaryStep(6); // Completed!
+      setHasSummary(true);
+
+      setTimeout(() => {
+        setSummaryLoading(false);
+        router.push(`/documents/${id}/summary`);
+      }, 1200);
+
+    } catch (err: any) {
+      clearInterval(timer);
+      console.error(err);
+      setSummaryError(err.message || "An unexpected error occurred during summary generation.");
+      setSummaryLoading(false);
+    }
+  };
 
   const fetchDocumentDetail = async () => {
     try {
@@ -137,6 +216,31 @@ export default function DocumentDetailPage() {
                 <p className="text-zinc-500 text-xs font-mono">{doc.filename}</p>
               </div>
               <div className="flex items-center gap-3">
+                {doc.processing_status === "completed" && !checkingSummary && (
+                  hasSummary ? (
+                    <Link href={`/documents/${doc.id}/summary`}>
+                      <Button variant="primary" size="sm" className="h-9 px-3 text-xs bg-violet-600 hover:bg-violet-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-violet-500/20 font-semibold">
+                        <Sparkles size={12} className="animate-pulse" />
+                        View Smart Summary
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      onClick={handleGenerateSummary}
+                      disabled={summaryLoading}
+                      className="h-9 px-3 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.2)] border border-violet-500/10 font-semibold"
+                    >
+                      {summaryLoading ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Sparkles size={12} />
+                      )}
+                      Generate Smart Summary
+                    </Button>
+                  )
+                )}
                 <a 
                   href={doc.cloudinary_url} 
                   target="_blank" 
@@ -182,6 +286,30 @@ export default function DocumentDetailPage() {
             </Link>
           </Card>
         )}
+
+        {/* SUMMARY ERROR DISPLAY */}
+        <AnimatePresence>
+          {summaryError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-start gap-3 p-4 rounded-xl border border-red-500/20 bg-red-950/15 mb-6"
+            >
+              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <h4 className="text-sm font-bold text-red-200">Summary Generation Failed</h4>
+                <p className="text-xs text-red-300/80 leading-relaxed">{summaryError}</p>
+              </div>
+              <button 
+                onClick={() => setSummaryError(null)}
+                className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* DETAILS GRID */}
         {doc && !loading && !error && (
@@ -334,6 +462,89 @@ export default function DocumentDetailPage() {
             </div>
           </motion.div>
         )}
+
+        {/* SUMMARY GENERATION PROGRESS MODAL OVERLAY */}
+        <AnimatePresence>
+          {summaryLoading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 10 }}
+                className="w-full max-w-lg bg-zinc-950/80 border border-violet-500/20 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6 relative overflow-hidden"
+              >
+                {/* Background glow decorator */}
+                <div className="absolute -top-10 -left-10 h-32 w-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+                
+                {/* Heading */}
+                <div className="space-y-1.5 text-center">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-2">
+                    <Sparkles className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">Creating Smart Summary</h3>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                    Translating this document into a structured, high-yield 10-minute learning journey...
+                  </p>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-violet-400 font-mono">Stage {summaryStep + 1} of 7</span>
+                    <span className="text-zinc-500 font-mono">
+                      {Math.round(((summaryStep + 1) / 7) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${((summaryStep + 1) / 7) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+
+                {/* Stepper Steps list */}
+                <div className="space-y-3">
+                  {summarySteps.map((stepName, idx) => {
+                    const isDone = summaryStep > idx;
+                    const isActive = summaryStep === idx;
+                    const isPending = summaryStep < idx;
+
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors duration-300 ${
+                          isDone 
+                            ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" 
+                            : isActive 
+                            ? "bg-violet-500/20 border-violet-500 text-violet-300 animate-pulse" 
+                            : "bg-zinc-900 border-zinc-800 text-zinc-600"
+                        }`}>
+                          {isDone ? <CheckCircle size={10} /> : idx + 1}
+                        </div>
+                        <span className={`text-xs font-medium transition-colors duration-300 ${
+                          isDone ? "text-zinc-400" : isActive ? "text-violet-300 font-bold" : "text-zinc-600"
+                        }`}>
+                          {stepName}
+                        </span>
+                        {isActive && (
+                          <Loader2 size={12} className="animate-spin text-violet-400 ml-auto" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </div>
   );

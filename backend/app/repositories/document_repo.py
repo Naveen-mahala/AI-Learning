@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
-from app.models.document import Document, DocumentContent, DocumentProcessingLog
+from app.models.document import Document, DocumentContent, DocumentProcessingLog, DocumentSummary
 from app.schemas.document import DocumentCreate
 
 class DocumentRepository:
@@ -96,3 +96,37 @@ class DocumentRepository:
             db.commit()
             return True
         return False
+
+    @staticmethod
+    def get_document_summary(db: Session, doc_id: str) -> Optional[DocumentSummary]:
+        return db.query(DocumentSummary).filter(DocumentSummary.document_id == doc_id).first()
+
+    @staticmethod
+    def create_or_update_document_summary(
+        db: Session, 
+        doc_id: str, 
+        summary_json: dict, 
+        learning_time: str, 
+        model_name: str
+    ) -> DocumentSummary:
+        # Check if one already exists
+        existing = db.query(DocumentSummary).filter(DocumentSummary.document_id == doc_id).first()
+        if existing:
+            existing.summary_json = summary_json
+            existing.learning_time = learning_time
+            existing.generated_by_model = model_name
+            db.commit()
+            db.refresh(existing)
+            return existing
+        else:
+            db_summary = DocumentSummary(
+                document_id=doc_id,
+                summary_json=summary_json,
+                learning_time=learning_time,
+                generated_by_model=model_name
+            )
+            db.add(db_summary)
+            db.commit()
+            db.refresh(db_summary)
+            return db_summary
+

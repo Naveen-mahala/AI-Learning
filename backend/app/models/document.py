@@ -1,5 +1,5 @@
 import datetime
-from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, func
+from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, func, JSON
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -22,6 +22,7 @@ class Document(Base):
     # Relationships
     contents = relationship("DocumentContent", back_populates="document", cascade="all, delete-orphan")
     logs = relationship("DocumentProcessingLog", back_populates="document", cascade="all, delete-orphan")
+    summary = relationship("DocumentSummary", back_populates="document", uselist=False, cascade="all, delete-orphan")
 
 
 class DocumentContent(Base):
@@ -51,3 +52,18 @@ class DocumentProcessingLog(Base):
 
     # Relationship
     document = relationship("Document", back_populates="logs")
+
+
+class DocumentSummary(Base):
+    __tablename__ = "document_summaries"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+    summary_json = Column(JSON, nullable=False)
+    learning_time = Column(String(50), nullable=False, default="10 minutes")
+    generated_by_model = Column(String(100), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationship
+    document = relationship("Document", back_populates="summary")
+

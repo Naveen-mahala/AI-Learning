@@ -67,3 +67,16 @@ class DocumentUploadResponse(BaseModel):
     file_url: str
     pages: int
     words: int
+
+
+class DocumentSummaryResponse(BaseModel):
+    id: int
+    document_id: str
+    summary_json: dict
+    learning_time: str
+    generated_by_model: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
