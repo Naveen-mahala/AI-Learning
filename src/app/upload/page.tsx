@@ -10,21 +10,35 @@ import {
   Trash2, 
   ChevronRight, 
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Loader2,
+  Clock,
+  X,
+  AlertCircle
 } from "lucide-react";
 import confetti from "canvas-confetti";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 
-interface UploadedFile {
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+interface Document {
   id: string;
   title: string;
-  type: string;
-  size: string;
-  status: "Processed" | "Analyzing..." | "Failed";
-  updatedAt: string;
-  url?: string;
+  file_name: string;
+  file_url: string;
+  cloudinary_public_id: string;
+  file_size: number;
+  page_count: number | null;
+  upload_status: "idle" | "uploading" | "processing" | "completed" | "failed";
+  created_at: string;
+  updated_at: string;
+}
+
+interface SuccessData {
+  title: string;
+  pageCount: number;
 }
 
 export default function UploadPage() {
@@ -33,61 +47,105 @@ export default function UploadPage() {
   const [uploadFileName, setUploadFileName] = useState("");
   const [uploadStatusMsg, setUploadStatusMsg] = useState("");
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [processingDocId, setProcessingDocId] = useState<string | null>(null);
+  const [successData, setSuccessData] = useState<SuccessData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [hasLoadedSavedFiles, setHasLoadedSavedFiles] = useState(false);
+  const [files, setFiles] = useState<Document[]>([]);
+  const [loadingFiles, setLoadingFiles] = useState(true);
 
-  // Load files from local storage on mount to prevent hydration mismatch
+  // Fetch documents on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("ai-learning-uploaded-files");
-      if (saved) {
-        try {
-          setFiles(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse saved files", e);
-        }
-      } else {
-        const initialMock: UploadedFile[] = [
-          {
-            id: "file-1",
-            title: "Intro_to_Deep_Learning.pdf",
-            type: "PDF Document",
-            size: "4.8 MB",
-            status: "Processed",
-            updatedAt: "2 hours ago",
-          },
-          {
-            id: "file-2",
-            title: "Linear_Regression_Notes.docx",
-            type: "Word Document",
-            size: "1.2 MB",
-            status: "Processed",
-            updatedAt: "Yesterday",
-          },
-          {
-            id: "file-3",
-            title: "Database_Normal_Forms.ppt",
-            type: "PowerPoint Presentation",
-            size: "8.5 MB",
-            status: "Processed",
-            updatedAt: "3 days ago",
-          },
-        ];
-        setFiles(initialMock);
-        localStorage.setItem("ai-learning-uploaded-files", JSON.stringify(initialMock));
-      }
-      setHasLoadedSavedFiles(true);
-    }
+    fetchDocuments();
   }, []);
 
-  // Save files to local storage when state changes
+  // Poll processing document status if any
   useEffect(() => {
-    if (hasLoadedSavedFiles && typeof window !== "undefined") {
-      localStorage.setItem("ai-learning-uploaded-files", JSON.stringify(files));
+    if (!processingDocId) return;
+
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      // Stop polling after 5 minutes (safety net)
+      if (attempts > 200) {
+        clearInterval(interval);
+        setUploadError("Processing timed out. Please check the document list below.");
+        setUploadProgress(null);
+        setProcessingDocId(null);
+        fetchDocuments();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/documents/${processingDocId}`);
+        if (!res.ok) throw new Error("Failed to check status");
+        
+        const data = await res.json();
+        
+        // Update log messages for UI feedback
+        if (data.logs && data.logs.length > 0) {
+          const latestLog = data.logs[data.logs.length - 1];
+          setUploadStatusMsg(latestLog.message);
+        }
+
+        if (data.upload_status === "completed") {
+          clearInterval(interval);
+          setUploadProgress(100);
+          setUploadStatusMsg("Text compilation complete!");
+          
+          setTimeout(() => {
+            // Trigger confetti
+            confetti({
+              particleCount: 80,
+              spread: 60,
+              origin: { y: 0.8 },
+              colors: ["#8b5cf6", "#6366f1", "#10b981"]
+            });
+
+            setSuccessData({
+              title: data.file_name,
+              pageCount: data.page_count || 0
+            });
+            
+            // Clean up States
+            setUploadProgress(null);
+            setUploadFileName("");
+            setProcessingDocId(null);
+            fetchDocuments();
+          }, 800);
+
+        } else if (data.upload_status === "failed") {
+          clearInterval(interval);
+          const errorLog = data.logs.find((l: any) => l.status === "failed")?.message || "PDF parsing failed.";
+          setUploadError(errorLog);
+          setUploadProgress(null);
+          setUploadFileName("");
+          setProcessingDocId(null);
+          fetchDocuments();
+        }
+
+      } catch (err: any) {
+        console.error("Polling error:", err);
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [processingDocId]);
+
+  const fetchDocuments = async () => {
+    try {
+      setLoadingFiles(true);
+      const res = await fetch(`${API_URL}/api/documents`);
+      if (!res.ok) throw new Error("Failed to load documents");
+      const data = await res.json();
+      setFiles(data);
+    } catch (e: any) {
+      console.error(e);
+      setUploadError("Could not connect to document database server.");
+    } finally {
+      setLoadingFiles(false);
     }
-  }, [files, hasLoadedSavedFiles]);
+  };
 
   // Drag and drop handlers
   const handleDrag = (e: React.DragEvent) => {
@@ -120,30 +178,45 @@ export default function UploadPage() {
 
   const handleUploadFile = async (file: File) => {
     if (uploadProgress !== null) return;
+    
     setUploadFileName(file.name);
     setUploadProgress(0);
     setUploadError(null);
-    setUploadStatusMsg("Initializing secure Cloudinary upload connection...");
+    setSuccessData(null);
+    setUploadStatusMsg("Validating document properties...");
 
-    const sizeFormatted = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+    // Client-side extension validation
+    const ext = file.name.split(".").pop()?.toLowerCase();
+    if (ext !== "pdf") {
+      setUploadError("Invalid file format. Only PDF documents (.pdf) are supported.");
+      setUploadProgress(null);
+      setUploadFileName("");
+      return;
+    }
+
+    // Client-side size validation (25MB)
+    const maxFileSize = 25 * 1024 * 1024;
+    if (file.size > maxFileSize) {
+      setUploadError("File size exceeds 25MB limit. Please upload a smaller PDF.");
+      setUploadProgress(null);
+      setUploadFileName("");
+      return;
+    }
 
     try {
       const formData = new FormData();
       formData.append("file", file);
 
-      // XMLHttp Request to track exact upload progress
+      // Track network upload progress
       const xhr = new XMLHttpRequest();
       
       const uploadPromise = new Promise<any>((resolve, reject) => {
         xhr.upload.addEventListener("progress", (event) => {
           if (event.lengthComputable) {
             const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(Math.min(percentComplete, 90)); // cap at 90% until server finishes processing
-            if (percentComplete < 50) {
-              setUploadStatusMsg("Uploading file buffer to Cloudinary...");
-            } else {
-              setUploadStatusMsg("Processing asset and extracting document structures...");
-            }
+            // Cap upload bar at 95% until server returns created document_id
+            setUploadProgress(Math.min(percentComplete, 95));
+            setUploadStatusMsg(`Uploading file chunk to server (${percentComplete}%)...`);
           }
         });
 
@@ -152,63 +225,99 @@ export default function UploadPage() {
             try {
               resolve(JSON.parse(xhr.responseText));
             } catch {
-              reject(new Error("Invalid response format from upload server."));
+              reject(new Error("Invalid server response format."));
             }
           } else {
             try {
               const errData = JSON.parse(xhr.responseText);
-              reject(new Error(errData.error || "Upload failed"));
+              reject(new Error(errData.detail || "Upload failed."));
             } catch {
-              reject(new Error(`Server error (${xhr.status})`));
+              reject(new Error(`Server upload error (HTTP ${xhr.status})`));
             }
           }
         });
 
-        xhr.addEventListener("error", () => reject(new Error("Network upload error")));
-        xhr.addEventListener("abort", () => reject(new Error("Upload aborted")));
+        xhr.addEventListener("error", () => reject(new Error("Network connection lost during upload.")));
+        xhr.addEventListener("abort", () => reject(new Error("Upload aborted.")));
 
-        xhr.open("POST", "/api/upload");
+        xhr.open("POST", `${API_URL}/api/documents/upload`);
         xhr.send(formData);
       });
 
       const result = await uploadPromise;
 
-      setUploadProgress(100);
-      setUploadStatusMsg("Optimized compiling complete!");
-
-      setTimeout(() => {
-        confetti({
-          particleCount: 60,
-          spread: 50,
-          origin: { y: 0.8 },
-          colors: ["#8b5cf6", "#6366f1", "#10b981"]
-        });
-
-        const newFile: UploadedFile = {
-          id: result.publicId || `file-${Date.now()}`,
-          title: result.title || file.name,
-          type: (result.title || file.name).split(".").pop()?.toUpperCase() + " Document" || "Text Document",
-          size: sizeFormatted,
-          status: "Processed",
-          updatedAt: "Just now",
-          url: result.url,
-        };
-
-        setFiles((prev) => [newFile, ...prev]);
-        setUploadProgress(null);
-        setUploadFileName("");
-      }, 850);
+      // Transition to processing state
+      setUploadProgress(95);
+      setUploadStatusMsg("Initial upload saved. Cloudinary storage registered.");
+      setProcessingDocId(result.document_id);
 
     } catch (err: any) {
       console.error(err);
-      setUploadError(err.message || "An unexpected error occurred during upload");
+      setUploadError(err.message || "An unexpected error occurred during upload.");
       setUploadProgress(null);
       setUploadFileName("");
     }
   };
 
-  const handleDeleteFile = (id: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== id));
+  const handleDeleteFile = async (id: string) => {
+    try {
+      const res = await fetch(`${API_URL}/api/documents/${id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok) throw new Error("Delete failed");
+      
+      // Update list
+      setFiles((prev) => prev.filter((f) => f.id !== id));
+      if (processingDocId === id) {
+        setProcessingDocId(null);
+        setUploadProgress(null);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete document from catalog.");
+    }
+  };
+
+  const formatBytes = (bytes: number, decimals = 1) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+            <CheckCircle size={10} />
+            Completed
+          </span>
+        );
+      case "processing":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-violet-500/20 bg-violet-500/5 text-violet-400 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+            <Loader2 size={10} className="animate-spin" />
+            Processing
+          </span>
+        );
+      case "failed":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-red-500/20 bg-red-500/5 text-red-400 text-[10px] font-bold uppercase tracking-wider">
+            <AlertCircle size={10} />
+            Failed
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full border border-zinc-700 bg-zinc-800 text-zinc-400 text-[10px] font-bold uppercase tracking-wider">
+            <Clock size={10} />
+            Pending
+          </span>
+        );
+    }
   };
 
   return (
@@ -223,9 +332,9 @@ export default function UploadPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               <UploadCloud className="text-violet-400" size={24} />
-              Material Compiler
+              Content Library
             </h1>
-            <p className="text-zinc-500 text-xs sm:text-sm">Compress textbooks, slides, and files into AI-guided summaries.</p>
+            <p className="text-zinc-500 text-xs sm:text-sm">Upload learning resources.</p>
           </div>
         </div>
 
@@ -253,6 +362,52 @@ export default function UploadPage() {
           )}
         </AnimatePresence>
 
+        {/* SUCCESS COMPILATION STATE SCREEN */}
+        <AnimatePresence>
+          {successData && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass-panel border border-emerald-500/20 rounded-xl p-6 bg-gradient-to-r from-emerald-950/15 to-zinc-950/80 space-y-4 relative overflow-hidden"
+            >
+              <div className="absolute top-4 right-4">
+                <button 
+                  onClick={() => setSuccessData(null)}
+                  className="p-1 rounded-full hover:bg-white/5 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="h-10 w-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                  <CheckCircle size={20} />
+                </div>
+                <div className="space-y-1.5 flex-1">
+                  <h3 className="text-base font-bold text-white">Document Uploaded Successfully</h3>
+                  <div className="text-xs text-zinc-400 space-y-1">
+                    <p className="font-semibold text-zinc-300 truncate max-w-lg">{successData.title}</p>
+                    <div className="grid grid-cols-2 gap-2 mt-3 max-w-xs font-mono text-[10px]">
+                      <div className="flex items-center gap-1.5 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Pages Extracted: <span className="font-bold text-white">{successData.pageCount}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-emerald-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Content Stored: <span className="font-bold text-white">True</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-emerald-400 col-span-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        Ready For AI Processing: <span className="font-bold text-white">True</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* UPLOAD BOX CARD */}
         <Card interactive={false} className="border-white/5">
           <div 
@@ -270,19 +425,19 @@ export default function UploadPage() {
             <input 
               ref={fileInputRef}
               type="file" 
-              accept=".pdf,.docx,.ppt,.pptx,.txt" 
+              accept=".pdf" 
               className="hidden" 
               onChange={handleFileChange}
             />
 
-            <div className="h-14 w-14 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 group-hover:scale-105 transition-transform duration-300">
+            <div className="h-14 w-14 rounded-full bg-zinc-900 border border-white/5 flex items-center justify-center text-zinc-400 transition-transform duration-300">
               <UploadCloud size={24} className="text-violet-400" />
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-sm sm:text-base font-bold text-white">Drag and drop file here, or click to browse</h3>
+              <h3 className="text-sm sm:text-base font-bold text-white">Drag and drop PDF here, or click to browse</h3>
               <p className="text-xs text-zinc-500 max-w-sm mx-auto">
-                Supports PDF, DOCX, PPT, or TXT. Maximum file size 25MB.
+                Supported File Types: PDF only. Maximum file size: 25MB.
               </p>
             </div>
           </div>
@@ -316,8 +471,9 @@ export default function UploadPage() {
                 />
               </div>
 
-              <div className="text-[10px] text-zinc-500 font-mono">
-                {uploadStatusMsg}
+              <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-1.5">
+                <Loader2 size={10} className="animate-spin text-violet-400 shrink-0" />
+                <span>{uploadStatusMsg}</span>
               </div>
             </motion.div>
           )}
@@ -336,10 +492,11 @@ export default function UploadPage() {
               <table className="w-full text-left border-collapse text-xs sm:text-sm">
                 <thead>
                   <tr className="border-b border-white/5 bg-zinc-950 text-[10px] text-zinc-500 uppercase tracking-wider font-bold">
-                    <th className="p-4 sm:p-5">Title</th>
-                    <th className="p-4 sm:p-5">Format</th>
+                    <th className="p-4 sm:p-5">Document Name</th>
+                    <th className="p-4 sm:p-5">Pages</th>
+                    <th className="p-4 sm:p-5">Size</th>
                     <th className="p-4 sm:p-5">Status</th>
-                    <th className="p-4 sm:p-5">Compiled</th>
+                    <th className="p-4 sm:p-5">Uploaded Date</th>
                     <th className="p-4 sm:p-5 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -359,47 +516,61 @@ export default function UploadPage() {
                             <div className="h-8 w-8 rounded bg-zinc-900 border border-white/5 flex items-center justify-center shrink-0">
                               <FileText size={16} className="text-violet-400" />
                             </div>
-                            {file.url ? (
+                            {file.file_url ? (
                               <a 
-                                href={file.url} 
+                                href={file.file_url} 
                                 target="_blank" 
                                 rel="noopener noreferrer" 
                                 className="truncate max-w-xs hover:text-violet-400 hover:underline transition-colors"
                               >
-                                {file.title}
+                                {file.file_name}
                               </a>
                             ) : (
-                              <span className="truncate max-w-xs">{file.title}</span>
+                              <span className="truncate max-w-xs">{file.file_name}</span>
                             )}
                           </div>
                         </td>
-                        {/* Format / Type */}
-                        <td className="p-4 sm:p-5 text-zinc-400">{file.type}</td>
+                        {/* Pages */}
+                        <td className="p-4 sm:p-5 text-zinc-400">
+                          {file.upload_status === "completed" 
+                            ? `${file.page_count} pages` 
+                            : file.upload_status === "processing" 
+                            ? "Extracting..." 
+                            : "N/A"}
+                        </td>
+                        {/* Size */}
+                        <td className="p-4 sm:p-5 text-zinc-400">{formatBytes(file.file_size)}</td>
                         {/* Status */}
                         <td className="p-4 sm:p-5">
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 text-emerald-400 text-[10px] font-bold">
-                            <CheckCircle size={10} />
-                            {file.status}
-                          </span>
+                          {getStatusBadge(file.upload_status)}
                         </td>
-                        {/* Compiled Date */}
-                        <td className="p-4 sm:p-5 text-zinc-500">{file.updatedAt}</td>
+                        {/* Uploaded Date */}
+                        <td className="p-4 sm:p-5 text-zinc-500">
+                          {new Date(file.created_at).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </td>
                         {/* Action buttons */}
                         <td className="p-4 sm:p-5 text-right">
                           <div className="flex justify-end items-center gap-2">
-                            <Link href="/learn">
-                              <Button 
-                                variant="secondary" 
-                                size="sm" 
-                                className="h-8 px-3 text-[11px] border border-zinc-800 hover:border-zinc-700/50"
-                                rightIcon={<ChevronRight size={10} />}
-                              >
-                                Learn
-                              </Button>
-                            </Link>
+                            {file.upload_status === "completed" && (
+                              <Link href={`/learn?id=${file.id}`}>
+                                <Button 
+                                  variant="secondary" 
+                                  size="sm" 
+                                  className="h-8 px-3 text-[11px] border border-zinc-800 hover:border-zinc-700/50"
+                                  rightIcon={<ChevronRight size={10} />}
+                                >
+                                  Learn
+                                </Button>
+                              </Link>
+                            )}
                             <button 
                               onClick={() => handleDeleteFile(file.id)}
                               className="h-8 w-8 rounded-lg bg-zinc-900 hover:bg-red-500/10 border border-white/5 hover:border-red-500/20 text-zinc-500 hover:text-red-400 flex items-center justify-center cursor-pointer transition-colors"
+                              title="Delete Document"
                             >
                               <Trash2 size={13} />
                             </button>
@@ -413,9 +584,17 @@ export default function UploadPage() {
             </div>
 
             {/* Empty block fallback */}
-            {files.length === 0 && (
+            {!loadingFiles && files.length === 0 && (
               <div className="p-12 text-center text-zinc-500 text-xs sm:text-sm">
                 No documents found in knowledge catalog. Drag files above to build modules.
+              </div>
+            )}
+
+            {/* Loading block fallback */}
+            {loadingFiles && files.length === 0 && (
+              <div className="p-12 text-center text-zinc-500 text-xs sm:text-sm flex items-center justify-center gap-2">
+                <Loader2 size={16} className="animate-spin text-violet-400" />
+                Loading inventory catalog...
               </div>
             )}
           </div>
