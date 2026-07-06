@@ -491,7 +491,6 @@ export default function UploadPage() {
                 {STEPS.map((step, idx) => {
                   const isDone = activeStep > idx;
                   const isActive = activeStep === idx;
-                  const isPending = activeStep < idx;
 
                   return (
                     <div key={idx} className="flex sm:flex-col items-start gap-3 sm:gap-1.5">

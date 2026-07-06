@@ -288,7 +288,8 @@ export function calculateXP(score: number, mode: QuizMode, duration: QuizDuratio
   return Math.round(base[duration] * modeMultiplier[mode] * accuracyBonus);
 }
 
-export function getBadge(score: number, mode: QuizMode): string {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function getBadge(score: number, _mode: QuizMode): string {
   if (score === 100) return "🏆 Perfect Score";
   if (score >= 90) return "⭐ Expert";
   if (score >= 75) return "🔥 Strong";

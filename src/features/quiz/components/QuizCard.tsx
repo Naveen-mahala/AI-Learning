@@ -169,7 +169,7 @@ export interface QuizCardProps {
 }
 
 export const QuizCard: React.FC<QuizCardProps> = ({
-  question, questionNumber, totalQuestions, selectedOption, isSubmitted,
+  question, questionNumber, selectedOption, isSubmitted,
   mode, onSelect, onSubmit, onNext, isLastQuestion,
 }) => {
   const cfg = modeConfig[mode];

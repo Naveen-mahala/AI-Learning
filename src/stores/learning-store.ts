@@ -213,7 +213,8 @@ export const useQuizStore = create<QuizState>((set, get) => ({
     set((state) => ({
       userAnswers: { ...state.userAnswers, [questionIndex]: option },
     })),
-  submitQuizAnswer: (questionIndex, correctAnswer) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  submitQuizAnswer: (questionIndex, _correctAnswer) => {
     const { userAnswers } = get();
     const selected = userAnswers[questionIndex];
     if (!selected) return;
