@@ -235,7 +235,7 @@ export default function DocumentSummaryPage() {
     // Check if user answered all questions
     const answeredCount = Object.keys(selectedAnswers).length;
     if (answeredCount < questions.length) {
-      alert("Please choose an answer for all 5 questions before submitting!");
+      alert(`Please choose an answer for all ${questions.length} questions before submitting!`);
       return;
     }
 
@@ -562,7 +562,7 @@ export default function DocumentSummaryPage() {
                       {/* Concepts Ranked List */}
                       <div className="space-y-4">
                         <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                          <h3 className="text-xs uppercase tracking-wider font-bold text-zinc-500 font-mono">Top 5 Concepts (Ranked by Importance)</h3>
+                          <h3 className="text-xs uppercase tracking-wider font-bold text-zinc-500 font-mono">Top {summary.summary_json.must_know_concepts.length} Concepts (Ranked by Importance)</h3>
                           <span className="text-[10px] text-violet-400 font-bold bg-violet-500/5 px-2 py-0.5 rounded border border-violet-500/10 font-mono">80/20 Knowledge</span>
                         </div>
 
@@ -737,7 +737,7 @@ export default function DocumentSummaryPage() {
                       {/* QUIZ HEADER */}
                       <div className="flex items-center justify-between border-b border-white/5 pb-2">
                         <h3 className="text-xs uppercase tracking-wider font-bold text-zinc-500 font-mono">Self-Evaluation Module</h3>
-                        <span className="text-[10px] text-violet-400 font-bold font-mono">5 Questions</span>
+                        <span className="text-[10px] text-violet-400 font-bold font-mono">{summary.summary_json.self_test_questions.length} Questions</span>
                       </div>
 
                       {/* QUIZ QUESTIONS */}

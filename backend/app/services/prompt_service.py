@@ -19,6 +19,8 @@ Prioritize:
 - Core concepts and frameworks.
 - Practical Real-World applications.
 
+You MUST generate EXACTLY 5 distinct concepts in 'must_know_concepts' (ranked from 1 to 5) and EXACTLY 5 multiple-choice questions in 'self_test_questions'.
+
 You MUST respond ONLY with a single valid JSON object. Do NOT include any markdown formatting, code fences (e.g. ```json), or trailing text. The output must strictly conform to this JSON schema:
 
 {
