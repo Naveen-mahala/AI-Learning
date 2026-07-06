@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft,
   FileText,
@@ -77,14 +77,7 @@ export default function DocumentDetailPage() {
     "Completed"
   ];
 
-  useEffect(() => {
-    if (id) {
-      fetchDocumentDetail();
-      checkSummaryExists();
-    }
-  }, [id]);
-
-  const checkSummaryExists = async () => {
+  const checkSummaryExists = useCallback(async () => {
     try {
       setCheckingSummary(true);
       const res = await fetch(`${API_URL}/api/document/${id}/summary`);
@@ -99,7 +92,35 @@ export default function DocumentDetailPage() {
     } finally {
       setCheckingSummary(false);
     }
-  };
+  }, [id]);
+
+  const fetchDocumentDetail = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await fetch(`${API_URL}/api/document/${id}`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          throw new Error("Document not found.");
+        }
+        throw new Error("Failed to load document details.");
+      }
+      const data = await res.json();
+      setDoc(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchDocumentDetail();
+      checkSummaryExists();
+    }
+  }, [id, fetchDocumentDetail, checkSummaryExists]);
 
   const handleGenerateSummary = async () => {
     setSummaryLoading(true);
@@ -140,27 +161,6 @@ export default function DocumentDetailPage() {
       console.error(err);
       setSummaryError(err.message || "An unexpected error occurred during summary generation.");
       setSummaryLoading(false);
-    }
-  };
-
-  const fetchDocumentDetail = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await fetch(`${API_URL}/api/document/${id}`);
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error("Document not found.");
-        }
-        throw new Error("Failed to load document details.");
-      }
-      const data = await res.json();
-      setDoc(data);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -516,7 +516,6 @@ export default function DocumentDetailPage() {
                   {summarySteps.map((stepName, idx) => {
                     const isDone = summaryStep > idx;
                     const isActive = summaryStep === idx;
-                    const isPending = summaryStep < idx;
 
                     return (
                       <div key={idx} className="flex items-center gap-3">

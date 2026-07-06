@@ -1,21 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowLeft,
   Sparkles,
   Clock,
   BookOpen,
-  HelpCircle,
   Play,
   Pause,
   RotateCcw,
   CheckCircle,
   AlertCircle,
-  FileText,
   ChevronRight,
   TrendingUp,
   Brain,
@@ -89,9 +87,25 @@ interface DocumentDetail {
   character_count: number;
 }
 
+// Section timing budgets (in seconds)
+const tabDurations = [
+  120, // 2 mins: Big Picture
+  180, // 3 mins: Concepts
+  120, // 2 mins: Examples
+  120, // 2 mins: Revision
+  60   // 1 min: Quiz
+];
+
+const tabLabels = [
+  { label: "Big Picture", duration: "2 min" },
+  { label: "Must Know Concepts", duration: "3 min" },
+  { label: "Real World Examples", duration: "2 min" },
+  { label: "Revision Sheet", duration: "2 min" },
+  { label: "Self-Test Quiz", duration: "1 min" }
+];
+
 export default function DocumentSummaryPage() {
   const params = useParams();
-  const router = useRouter();
   const id = params.id as string;
 
   const [summary, setSummary] = useState<SummaryData | null>(null);
@@ -101,23 +115,6 @@ export default function DocumentSummaryPage() {
 
   // Active section tab index: 0=Big Picture, 1=Concepts, 2=Examples, 3=Revision, 4=Self-Test
   const [activeTab, setActiveTab] = useState<number>(0);
-
-  // Section timing budgets (in seconds)
-  const tabDurations = [
-    120, // 2 mins: Big Picture
-    180, // 3 mins: Concepts
-    120, // 2 mins: Examples
-    120, // 2 mins: Revision
-    60   // 1 min: Quiz
-  ];
-
-  const tabLabels = [
-    { label: "Big Picture", duration: "2 min" },
-    { label: "Must Know Concepts", duration: "3 min" },
-    { label: "Real World Examples", duration: "2 min" },
-    { label: "Revision Sheet", duration: "2 min" },
-    { label: "Self-Test Quiz", duration: "1 min" }
-  ];
 
   // Timer states
   const [timeLeft, setTimeLeft] = useState(tabDurations[0]);
@@ -129,26 +126,7 @@ export default function DocumentSummaryPage() {
   const [showFeedback, setShowFeedback] = useState<Record<number, boolean>>({});
   const [quizScore, setQuizScore] = useState<number | null>(null);
 
-  useEffect(() => {
-    if (id) {
-      fetchSummaryData();
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [id]);
-
-  // Sync timer when active tab changes
-  useEffect(() => {
-    setTimeLeft(tabDurations[activeTab]);
-    setTimerRunning(false);
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  }, [activeTab]);
-
-  const fetchSummaryData = async () => {
+  const fetchSummaryData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -178,7 +156,26 @@ export default function DocumentSummaryPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchSummaryData();
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [id, fetchSummaryData]);
+
+  // Sync timer when active tab changes
+  useEffect(() => {
+    setTimeLeft(tabDurations[activeTab]);
+    setTimerRunning(false);
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, [activeTab]);
 
   // Timer Handlers
   const toggleTimer = () => {
@@ -277,11 +274,11 @@ export default function DocumentSummaryPage() {
         staggerChildren: 0.1
       }
     }
-  };
+  } as const;
 
   const cardAnim = {
     hidden: { opacity: 0, y: 12 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100, damping: 15 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 100, damping: 15 } }
   };
 
   return (
@@ -671,7 +668,7 @@ export default function DocumentSummaryPage() {
                                   </div>
                                   <div className="space-y-1">
                                     <h4 className="text-xs md:text-sm font-bold text-amber-300">
-                                      Misconception: "{m.mistake}"
+                                      Misconception: &quot;{m.mistake}&quot;
                                     </h4>
                                     <p className="text-xs text-zinc-400 leading-relaxed">
                                       <span className="font-semibold text-zinc-300">Correction: </span>
