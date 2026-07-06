@@ -8,12 +8,13 @@ class Document(Base):
 
     id = Column(String(36), primary_key=True, index=True)
     title = Column(String(255), nullable=False)
-    file_name = Column(String(255), nullable=False)
-    file_url = Column(String(1024), nullable=False)
+    filename = Column(String(255), nullable=False)
+    cloudinary_url = Column(String(1024), nullable=False)
     cloudinary_public_id = Column(String(255), nullable=False)
     file_size = Column(Integer, nullable=False)
+    processing_status = Column(String(50), nullable=False, default="idle")
     page_count = Column(Integer, nullable=True)
-    upload_status = Column(String(50), nullable=False, default="idle")
+    estimated_reading_time = Column(Integer, nullable=True)  # in minutes
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -28,8 +29,9 @@ class DocumentContent(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
-    page_number = Column(Integer, nullable=False)
-    content = Column(Text, nullable=False)
+    raw_text = Column(Text, nullable=False)
+    word_count = Column(Integer, nullable=False)
+    character_count = Column(Integer, nullable=False)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

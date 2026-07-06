@@ -4,8 +4,9 @@ from datetime import datetime
 
 # Document Content schemas
 class DocumentContentBase(BaseModel):
-    page_number: int
-    content: str
+    raw_text: str
+    word_count: int
+    character_count: int
 
     class Config:
         from_attributes = True
@@ -33,30 +34,36 @@ class DocumentProcessingLogResponse(DocumentProcessingLogBase):
 # Document schemas
 class DocumentBase(BaseModel):
     title: str
-    file_name: str
-    file_url: str
+    filename: str
+    cloudinary_url: str
     cloudinary_public_id: str
     file_size: int
+    processing_status: str
     page_count: Optional[int] = None
-    upload_status: str
+    estimated_reading_time: Optional[int] = None
 
 class DocumentCreate(DocumentBase):
     id: str
 
 class DocumentResponse(DocumentBase):
     id: str
+    word_count: Optional[int] = None
+    character_count: Optional[int] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
 
-# Extended schema to get detailed info of a document, including pages and logs
+# Extended schema to get detailed info of a document, including preview and logs
 class DocumentDetailResponse(DocumentResponse):
-    contents: List[DocumentContentResponse] = []
+    text_preview: Optional[str] = None
     logs: List[DocumentProcessingLogResponse] = []
 
 # Schema specifically for the Upload response
 class DocumentUploadResponse(BaseModel):
+    success: bool
     document_id: str
-    status: str
+    file_url: str
+    pages: int
+    words: int

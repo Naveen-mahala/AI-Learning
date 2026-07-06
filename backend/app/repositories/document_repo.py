@@ -1,7 +1,7 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from app.models.document import Document, DocumentContent, DocumentProcessingLog
-from app.schemas.document import DocumentCreate, DocumentContentBase
+from app.schemas.document import DocumentCreate
 
 class DocumentRepository:
     @staticmethod
@@ -9,12 +9,13 @@ class DocumentRepository:
         db_doc = Document(
             id=doc_create.id,
             title=doc_create.title,
-            file_name=doc_create.file_name,
-            file_url=doc_create.file_url,
+            filename=doc_create.filename,
+            cloudinary_url=doc_create.cloudinary_url,
             cloudinary_public_id=doc_create.cloudinary_public_id,
             file_size=doc_create.file_size,
             page_count=doc_create.page_count,
-            upload_status=doc_create.upload_status
+            estimated_reading_time=doc_create.estimated_reading_time,
+            processing_status=doc_create.processing_status
         )
         db.add(db_doc)
         db.commit()
@@ -23,51 +24,57 @@ class DocumentRepository:
 
     @staticmethod
     def get_document(db: Session, doc_id: str) -> Optional[Document]:
-        return db.query(Document).filter(Document.id == doc_id).first()
+        return db.query(Document).options(
+            joinedload(Document.contents),
+            joinedload(Document.logs)
+        ).filter(Document.id == doc_id).first()
 
     @staticmethod
-    def get_document_by_name_and_size(db: Session, file_name: str, file_size: int) -> Optional[Document]:
+    def get_document_by_name_and_size(db: Session, filename: str, file_size: int) -> Optional[Document]:
         # Checks if a document with same name and size exists (and is not failed) to prevent duplication
         return db.query(Document).filter(
-            Document.file_name == file_name,
+            Document.filename == filename,
             Document.file_size == file_size,
-            Document.upload_status != "failed"
+            Document.processing_status != "failed"
         ).first()
 
     @staticmethod
     def list_documents(db: Session, skip: int = 0, limit: int = 100) -> List[Document]:
-        return db.query(Document).order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
+        return db.query(Document).options(
+            joinedload(Document.contents)
+        ).order_by(Document.created_at.desc()).offset(skip).limit(limit).all()
 
     @staticmethod
     def update_document_status(db: Session, doc_id: str, status: str) -> Optional[Document]:
         db_doc = db.query(Document).filter(Document.id == doc_id).first()
         if db_doc:
-            db_doc.upload_status = status
+            db_doc.processing_status = status
             db.commit()
             db.refresh(db_doc)
         return db_doc
 
     @staticmethod
-    def update_document_page_count(db: Session, doc_id: str, page_count: int) -> Optional[Document]:
+    def update_document_metadata(db: Session, doc_id: str, page_count: int, estimated_reading_time: int) -> Optional[Document]:
         db_doc = db.query(Document).filter(Document.id == doc_id).first()
         if db_doc:
             db_doc.page_count = page_count
+            db_doc.estimated_reading_time = estimated_reading_time
             db.commit()
             db.refresh(db_doc)
         return db_doc
 
     @staticmethod
-    def add_page_contents(db: Session, doc_id: str, pages: List[DocumentContentBase]):
-        db_contents = [
-            DocumentContent(
-                document_id=doc_id,
-                page_number=p.page_number,
-                content=p.content
-            )
-            for p in pages
-        ]
-        db.bulk_save_objects(db_contents)
+    def add_document_content(db: Session, doc_id: str, raw_text: str, word_count: int, character_count: int) -> DocumentContent:
+        db_content = DocumentContent(
+            document_id=doc_id,
+            raw_text=raw_text,
+            word_count=word_count,
+            character_count=character_count
+        )
+        db.add(db_content)
         db.commit()
+        db.refresh(db_content)
+        return db_content
 
     @staticmethod
     def log_processing_step(db: Session, doc_id: str, status: str, message: str) -> DocumentProcessingLog:
