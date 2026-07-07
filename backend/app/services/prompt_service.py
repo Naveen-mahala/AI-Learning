@@ -153,3 +153,80 @@ Content to analyze:
 
 Now, analyze the text and generate the conceptual knowledge layer JSON object following the strict schema:"""
 
+
+# Revision Notes Prompts
+
+REVISION_SYSTEM_PROMPT = """You are an expert learning scientist, prompt engineer, and educational content architect.
+Your task is to transform long educational lecture content into a high-density, highly structured revision sheet optimized for retention, recall, and exam/interview preparation.
+You must NOT write a traditional, verbose summary. Focus strictly on rapid review and cognitive load reduction.
+
+CRITICAL JSON RULES:
+1. You MUST respond ONLY with a single valid JSON object.
+2. Do NOT use unescaped double quotes inside string values (especially in 'final_revision_sheet' or questions). Either escape them as \\" or use single quotes (') instead.
+3. Do NOT include any markdown code blocks or wrapper text (like ```json). The output must strictly conform to this JSON schema.
+
+The student has requested a {revision_time} revision mode.
+Tailor the density and selection of details to fit this time frame:
+- For "5 mins": Include only the top 3-5 absolute essentials. Focus only on high-yield, foundational ideas and definitions.
+- For "10 mins": Provide a balanced revision sheet of 5-8 items including concepts, definitions, questions, and common mistakes.
+- For "20 mins": Generate a comprehensive study sheet of 8-12 items covering all important and advanced concepts, detailed definitions, interview notes, exam tips, and practical applications.
+
+Highlight the importance of each item using one of these categories: "Critical", "Important", "Nice to Know".
+
+{{
+  "title": "A high-impact, memory-anchoring revision title (e.g., 'Linear Regression: Core Mechanics')",
+  "estimated_revision_time": "5 mins",  // Must match exactly: "5 mins", "10 mins", or "20 mins"
+  "core_concepts": [
+    {{
+      "concept": "Concept Name",
+      "importance": "Critical", // "Critical" | "Important" | "Nice to Know"
+      "explanation": "High-density explanation, strictly avoiding fluff. Max 2 sentences."
+    }}
+  ],
+  "must_remember": [
+    {{
+      "point": "A critical test-taking or high-yield fact to commit to memory.",
+      "importance": "Critical" // "Critical" | "Important" | "Nice to Know"
+    }}
+  ],
+  "important_definitions": [
+    {{
+      "term": "Term Name",
+      "definition": "Precise, easy-to-recall definition.",
+      "importance": "Critical" // "Critical" | "Important" | "Nice to Know"
+    }}
+  ],
+  "common_mistakes": [
+    {{
+      "mistake": "Misconception or typical error students make (e.g., assuming correlation equals causation).",
+      "correction": "The correct understanding or how to avoid the trap.",
+      "importance": "Important" // "Critical" | "Important" | "Nice to Know"
+    }}
+  ],
+  "important_questions": [
+    {{
+      "question": "An exam-style conceptual question testing deep comprehension.",
+      "importance": "Important" // "Critical" | "Important" | "Nice to Know"
+    }}
+  ],
+  "interview_quick_answers": [
+    {{
+      "question": "A typical technical or conceptual interview question.",
+      "answer": "A punchy, single-sentence response that demonstrates mastery immediately.",
+      "importance": "Critical" // "Critical" | "Important" | "Nice to Know"
+    }}
+  ],
+  "final_revision_sheet": "A self-contained markdown document summarizing the entire lecture content. It must fit the requested time constraints and be structured logically with the following headers: # Big Picture (one paragraph answering: What is this topic? Why does it matter?), # Core Concepts, # Must Remember Points, # Important Definitions, # Common Mistakes, # Important Questions, # Quick Answers. Use clear lists, bold text, and code formatting where necessary."
+}}
+"""
+
+def get_revision_user_prompt(document_title: str, document_text: str) -> str:
+    return f"""Document Title: {document_title}
+
+Content to analyze:
+---
+{document_text}
+---
+
+Now, generate the revision sheet JSON object for the text above following the strict schema:"""
+

@@ -14,6 +14,9 @@ from app.schemas.document import (
     DocumentSummaryResponse
 )
 from app.services.ai_service import AIManager, AIProviderError
+from app.schemas.revision_note import RevisionNoteResponse
+from app.services.revision_note_service import RevisionNoteService
+from app.repositories.revision_note_repo import RevisionNoteRepository
 
 logger = logging.getLogger(__name__)
 
@@ -236,4 +239,61 @@ def get_summary(id: str, db: Session = Depends(get_db)):
             detail=f"Smart summary not found for document {id}. Please generate it first."
         )
     return summary
+
+
+@router.post("/api/document/{id}/generate-revision", response_model=RevisionNoteResponse)
+@router.post("/api/documents/{id}/generate-revision", response_model=RevisionNoteResponse)
+def generate_revision(
+    id: str,
+    revision_type: str = "10 mins",
+    provider: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers AI-based Revision Notes generation for the given document and revision type.
+    Saves the generated revision package to the database and returns it.
+    """
+    logger.info(f"Generate revision request received for document {id}, mode: {revision_type}")
+    
+    # Normalize revision_type
+    valid_modes = ["5 mins", "10 mins", "20 mins"]
+    if revision_type not in valid_modes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid revision_type '{revision_type}'. Must be one of {valid_modes}."
+        )
+
+    return RevisionNoteService.generate_revision_sync(
+        db=db,
+        doc_id=id,
+        revision_type=revision_type,
+        provider=provider
+    )
+
+
+@router.get("/api/document/{id}/revision", response_model=RevisionNoteResponse)
+@router.get("/api/documents/{id}/revision", response_model=RevisionNoteResponse)
+def get_revision(
+    id: str,
+    revision_type: str = "10 mins",
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves the saved revision notes package for a document, filtered by revision type.
+    """
+    valid_modes = ["5 mins", "10 mins", "20 mins"]
+    if revision_type not in valid_modes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid revision_type '{revision_type}'. Must be one of {valid_modes}."
+        )
+
+    revision = RevisionNoteRepository.get_revision_note(db, id, revision_type)
+    if not revision:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Revision notes not found for document {id} with mode '{revision_type}'."
+        )
+    return revision
+
 

@@ -24,6 +24,7 @@ class Document(Base):
     logs = relationship("DocumentProcessingLog", back_populates="document", cascade="all, delete-orphan")
     summary = relationship("DocumentSummary", back_populates="document", uselist=False, cascade="all, delete-orphan")
     concepts = relationship("Concept", back_populates="document", cascade="all, delete-orphan")
+    revision_notes = relationship("RevisionNote", back_populates="document", cascade="all, delete-orphan")
 
 
 class DocumentContent(Base):

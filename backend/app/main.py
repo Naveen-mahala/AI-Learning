@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app.routes import documents, concepts
 from app.models.concept import Concept, ConceptRelationship
+from app.models.revision_note import RevisionNote
 from app.utils.logger import setup_logging
 
 # Configure logging

@@ -19,7 +19,8 @@ import {
   Info,
   Sparkles,
   CheckCircle,
-  Brain
+  Brain,
+  Zap
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/Card";
@@ -377,6 +378,14 @@ export default function DocumentDetailPage() {
                       Extract Concepts
                     </Button>
                   )
+                )}
+                {doc.processing_status === "completed" && (
+                  <Link href={`/documents/${doc.id}/revision`}>
+                    <Button variant="primary" size="sm" className="h-9 px-3 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-violet-500/20 font-semibold">
+                      <Zap size={12} />
+                      Revision Notes
+                    </Button>
+                  </Link>
                 )}
                 <a 
                   href={doc.cloudinary_url} 

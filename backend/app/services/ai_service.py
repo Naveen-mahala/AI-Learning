@@ -11,7 +11,9 @@ from app.services.prompt_service import (
     SYSTEM_PROMPT, 
     get_user_prompt, 
     CONCEPT_SYSTEM_PROMPT, 
-    get_concept_user_prompt
+    get_concept_user_prompt,
+    REVISION_SYSTEM_PROMPT,
+    get_revision_user_prompt
 )
 
 logger = logging.getLogger(__name__)
@@ -36,6 +38,15 @@ class BaseAIProvider(ABC):
         Generate a structured concept map/knowledge layer from the given document content.
         Returns:
             Dict representing the generated JSON concept package.
+        """
+        pass
+
+    @abstractmethod
+    def generate_revision(self, title: str, text: str, revision_time: str) -> Dict[str, Any]:
+        """
+        Generate a structured revision notes package from the given document content.
+        Returns:
+            Dict representing the generated JSON revision package.
         """
         pass
 
@@ -169,6 +180,57 @@ class GoogleAIProvider(BaseAIProvider):
             logger.error(f"Error communicating with Gemini: {str(e)}")
             raise AIProviderError(f"Gemini integration error: {str(e)}")
 
+    def generate_revision(self, title: str, text: str, revision_time: str) -> Dict[str, Any]:
+        api_key = settings.GEMINI_API_KEY
+        if not api_key:
+            raise AIProviderError("GEMINI_API_KEY is not configured.")
+            
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        
+        payload = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [{"text": get_revision_user_prompt(title, text)}]
+                }
+            ],
+            "systemInstruction": {
+                "parts": [{"text": REVISION_SYSTEM_PROMPT.format(revision_time=revision_time)}]
+            },
+            "generationConfig": {
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        headers = {"Content-Type": "application/json"}
+        
+        try:
+            logger.info(f"Calling Google AI Studio for Revision Notes ({revision_time})...")
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=120) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                
+            candidates = result.get("candidates", [])
+            if not candidates:
+                raise AIProviderError("No response content generated from Gemini.")
+                
+            content_text = candidates[0]["content"]["parts"][0]["text"]
+            return self._clean_and_parse_json(content_text)
+            
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8") if e.fp else ""
+            logger.error(f"Gemini API returned status {e.code}. Details: {error_body}")
+            raise AIProviderError(f"Gemini API HTTP Error {e.code}: {e.reason}")
+        except Exception as e:
+            logger.error(f"Error communicating with Gemini: {str(e)}")
+            raise AIProviderError(f"Gemini integration error: {str(e)}")
+
 
 
 class GroqAIProvider(BaseAIProvider):
@@ -272,6 +334,55 @@ class GroqAIProvider(BaseAIProvider):
             logger.error(f"Error communicating with Groq: {str(e)}")
             raise AIProviderError(f"Groq integration error: {str(e)}")
 
+    def generate_revision(self, title: str, text: str, revision_time: str) -> Dict[str, Any]:
+        api_key = settings.GROQ_API_KEY
+        if not api_key:
+            raise AIProviderError("GROQ_API_KEY is not configured.")
+            
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        
+        payload = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": REVISION_SYSTEM_PROMPT.format(revision_time=revision_time)},
+                {"role": "user", "content": get_revision_user_prompt(title, text)}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.3
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        try:
+            logger.info(f"Calling Groq (llama-3.3-70b-versatile) for Revision Notes ({revision_time})...")
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=120) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                
+            choices = result.get("choices", [])
+            if not choices:
+                raise AIProviderError("No response content generated from Groq.")
+                
+            content_text = choices[0]["message"]["content"]
+            return self._clean_and_parse_json(content_text)
+            
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8") if e.fp else ""
+            logger.error(f"Groq API returned status {e.code}. Details: {error_body}")
+            raise AIProviderError(f"Groq API HTTP Error {e.code}: {e.reason}")
+        except Exception as e:
+            logger.error(f"Error communicating with Groq: {str(e)}")
+            raise AIProviderError(f"Groq integration error: {str(e)}")
+
 
 
 class OpenRouterAIProvider(BaseAIProvider):
@@ -291,7 +402,8 @@ class OpenRouterAIProvider(BaseAIProvider):
                 {"role": "user", "content": get_user_prompt(title, text)}
             ],
             "response_format": {"type": "json_object"},
-            "temperature": 0.3
+            "temperature": 0.3,
+            "max_tokens": 4096
         }
         
         headers = {
@@ -342,7 +454,8 @@ class OpenRouterAIProvider(BaseAIProvider):
                 {"role": "user", "content": get_concept_user_prompt(title, text)}
             ],
             "response_format": {"type": "json_object"},
-            "temperature": 0.3
+            "temperature": 0.3,
+            "max_tokens": 4096
         }
         
         headers = {
@@ -354,6 +467,58 @@ class OpenRouterAIProvider(BaseAIProvider):
         
         try:
             logger.info("Calling OpenRouter (google/gemini-2.5-flash) for concepts...")
+            req = urllib.request.Request(
+                url,
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST"
+            )
+            
+            with urllib.request.urlopen(req, timeout=120) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                
+            choices = result.get("choices", [])
+            if not choices:
+                raise AIProviderError("No response content generated from OpenRouter.")
+                
+            content_text = choices[0]["message"]["content"]
+            return self._clean_and_parse_json(content_text)
+            
+        except urllib.error.HTTPError as e:
+            error_body = e.read().decode("utf-8") if e.fp else ""
+            logger.error(f"OpenRouter API returned status {e.code}. Details: {error_body}")
+            raise AIProviderError(f"OpenRouter API HTTP Error {e.code}: {e.reason}")
+        except Exception as e:
+            logger.error(f"Error communicating with OpenRouter: {str(e)}")
+            raise AIProviderError(f"OpenRouter integration error: {str(e)}")
+
+    def generate_revision(self, title: str, text: str, revision_time: str) -> Dict[str, Any]:
+        api_key = settings.OPENROUTER_API_KEY
+        if not api_key:
+            raise AIProviderError("OPENROUTER_API_KEY is not configured.")
+            
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        
+        payload = {
+            "model": "google/gemini-2.5-flash",
+            "messages": [
+                {"role": "system", "content": REVISION_SYSTEM_PROMPT.format(revision_time=revision_time)},
+                {"role": "user", "content": get_revision_user_prompt(title, text)}
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": 0.3,
+            "max_tokens": 4096
+        }
+        
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "HTTP-Referer": "http://localhost:3000",
+            "X-Title": "AI Learning Accelerator"
+        }
+        
+        try:
+            logger.info(f"Calling OpenRouter (google/gemini-2.5-flash) for Revision Notes ({revision_time})...")
             req = urllib.request.Request(
                 url,
                 data=json.dumps(payload).encode("utf-8"),
@@ -487,4 +652,42 @@ class AIManager:
                     logger.error(f"Backup provider {type(backup).__name__} failed for concepts: {str(backup_err)}")
                     
             raise AIProviderError(f"All configured AI providers failed to extract concepts: {str(e)}")
+
+    @classmethod
+    def generate_revision(cls, title: str, text: str, revision_time: str, provider_name: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Executes revision notes generation with automatic fallback to another provider on failure.
+        """
+        # Truncate text if it is extremely large to avoid token limit errors
+        max_chars = 40000
+        truncated_text = text
+        if len(text) > max_chars:
+            logger.warning(f"Document content size ({len(text)} chars) is large. Truncating to {max_chars} chars.")
+            truncated_text = text[:max_chars] + "\n\n[Content truncated for token safety...]"
+
+        provider = cls.get_provider(provider_name)
+        
+        try:
+            return provider.generate_revision(title, truncated_text, revision_time)
+        except Exception as e:
+            logger.warning(f"Primary AI provider failed for revision: {str(e)}. Attempting backup fallback provider...")
+            
+            current_name = type(provider).__name__
+            fallback_providers = []
+            
+            if current_name != "GoogleAIProvider" and settings.GEMINI_API_KEY:
+                fallback_providers.append(GoogleAIProvider())
+            if current_name != "GroqAIProvider" and settings.GROQ_API_KEY:
+                fallback_providers.append(GroqAIProvider())
+            if current_name != "OpenRouterAIProvider" and settings.OPENROUTER_API_KEY:
+                fallback_providers.append(OpenRouterAIProvider())
+                
+            for backup in fallback_providers:
+                try:
+                    logger.info(f"Retrying revision generation using backup: {type(backup).__name__}")
+                    return backup.generate_revision(title, truncated_text, revision_time)
+                except Exception as backup_err:
+                    logger.error(f"Backup provider {type(backup).__name__} failed for revision: {str(backup_err)}")
+                    
+            raise AIProviderError(f"All configured AI providers failed to generate revision: {str(e)}")
 
