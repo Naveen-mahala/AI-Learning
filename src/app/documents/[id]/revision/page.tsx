@@ -154,6 +154,50 @@ export default function RevisionNotesPage() {
     }
   }, [id, activeMode, fetchRevisionData]);
 
+  // Intersection Observer for scroll synchronization
+  useEffect(() => {
+    if (!revision) return;
+
+    const observerOptions = {
+      root: null, // viewport
+      rootMargin: "-25% 0px -55% 0px", // focus area in the top-middle of the screen
+      threshold: 0
+    };
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(entry.target.id);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    const sections = [
+      "big-picture",
+      "core-concepts",
+      "must-remember",
+      "definitions",
+      "mistakes",
+      "questions",
+      "quick-answers",
+      "revision-sheet"
+    ];
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      sections.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) observer.unobserve(el);
+      });
+    };
+  }, [revision]);
+
   // Handle generation pipeline trigger
   const handleGenerateRevision = async () => {
     setGenerating(true);

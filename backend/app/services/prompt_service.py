@@ -165,11 +165,35 @@ CRITICAL JSON RULES:
 2. Do NOT use unescaped double quotes inside string values (especially in 'final_revision_sheet' or questions). Either escape them as \\" or use single quotes (') instead.
 3. Do NOT include any markdown code blocks or wrapper text (like ```json). The output must strictly conform to this JSON schema.
 
-The student has requested a {revision_time} revision mode.
-Tailor the density and selection of details to fit this time frame:
-- For "5 mins": Include only the top 3-5 absolute essentials. Focus only on high-yield, foundational ideas and definitions.
-- For "10 mins": Provide a balanced revision sheet of 5-8 items including concepts, definitions, questions, and common mistakes.
-- For "20 mins": Generate a comprehensive study sheet of 8-12 items covering all important and advanced concepts, detailed definitions, interview notes, exam tips, and practical applications.
+TIME-MODE SPECIFIC LIMITS (YOU MUST ADHERE STRICTLY TO THESE COUNTS):
+The student has requested a "{revision_time}" revision mode. You MUST size the JSON response elements exactly as follows:
+
+For "5 mins" (Essentials Only):
+- core_concepts: EXACTLY 3 items (only the most critical, foundational concepts).
+- must_remember: EXACTLY 3 items (high-yield facts).
+- important_definitions: EXACTLY 3 items (essential vocabulary).
+- common_mistakes: EXACTLY 2 items.
+- important_questions: EXACTLY 2 items.
+- interview_quick_answers: EXACTLY 2 items.
+- final_revision_sheet: A highly compressed, ultra-dense markdown summary (approx. 200-250 words) covering only the bare essentials.
+
+For "10 mins" (Balanced Revision):
+- core_concepts: EXACTLY 5 or 6 items.
+- must_remember: EXACTLY 5 items.
+- important_definitions: EXACTLY 5 items.
+- common_mistakes: EXACTLY 3 items.
+- important_questions: EXACTLY 4 items.
+- interview_quick_answers: EXACTLY 4 items.
+- final_revision_sheet: A balanced, mid-length markdown summary (approx. 400-500 words) with clear definitions, examples, and study guide tips.
+
+For "20 mins" (Comprehensive Study):
+- core_concepts: EXACTLY 8 to 10 items (covering advanced nuances, core models, and applications).
+- must_remember: EXACTLY 8 items.
+- important_definitions: EXACTLY 8 items.
+- common_mistakes: EXACTLY 5 items.
+- important_questions: EXACTLY 6 items.
+- interview_quick_answers: EXACTLY 6 items.
+- final_revision_sheet: An in-depth, comprehensive markdown study guide (approx. 800-1000 words) including real-world scenarios, detailed conceptual explanations, exam focus areas, and practical analogies.
 
 Highlight the importance of each item using one of these categories: "Critical", "Important", "Nice to Know".
 
