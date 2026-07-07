@@ -93,7 +93,7 @@ Now, generate the 10-minute learning experience JSON object for the text above f
 CONCEPT_SYSTEM_PROMPT = """You are an expert educator, learning experience designer, and knowledge graph architect.
 Your task is to analyze the provided educational text and build a high-fidelity conceptual knowledge layer.
 
-You must identify:
+You must identify and extract the most critical concepts (aim for between 6 to 12 key concepts in total to maintain high pedagogical value and speed):
 1. Core Concepts: The most important, foundational ideas that are central to understanding the subject.
 2. Supporting Concepts: Important but secondary ideas that build upon or detail the core concepts.
 3. Advanced Concepts: Optional deeper topics for advanced learners.

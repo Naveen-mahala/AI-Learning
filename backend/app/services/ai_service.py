@@ -99,8 +99,8 @@ class GoogleAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            # 60 seconds timeout
-            with urllib.request.urlopen(req, timeout=60) as response:
+            # 120 seconds timeout
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             candidates = result.get("candidates", [])
@@ -151,7 +151,7 @@ class GoogleAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             candidates = result.get("candidates", [])
@@ -205,7 +205,7 @@ class GroqAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             choices = result.get("choices", [])
@@ -254,7 +254,7 @@ class GroqAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             choices = result.get("choices", [])
@@ -310,7 +310,7 @@ class OpenRouterAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             choices = result.get("choices", [])
@@ -361,7 +361,7 @@ class OpenRouterAIProvider(BaseAIProvider):
                 method="POST"
             )
             
-            with urllib.request.urlopen(req, timeout=60) as response:
+            with urllib.request.urlopen(req, timeout=120) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 
             choices = result.get("choices", [])
@@ -456,7 +456,7 @@ class AIManager:
         Executes concept map extraction with automatic fallback to another provider on failure.
         """
         # Truncate text if it is extremely large to avoid token limit errors
-        max_chars = 40000
+        max_chars = 20000
         truncated_text = text
         if len(text) > max_chars:
             logger.warning(f"Document content size ({len(text)} chars) is large for concepts. Truncating to {max_chars} chars.")
