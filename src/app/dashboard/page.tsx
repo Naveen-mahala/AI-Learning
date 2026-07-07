@@ -229,23 +229,25 @@ export default function DashboardPage() {
               Array.from({ length: 3 }).map((_, idx) => (
                 <div 
                   key={idx}
-                  className="glass-panel border border-white/5 rounded-xl p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 animate-pulse"
+                  className="glass-panel border border-white/5 rounded-xl p-5 grid grid-cols-1 md:grid-cols-12 items-stretch md:items-center gap-6 animate-pulse"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 md:col-span-6">
                     <div className="h-11 w-11 rounded-lg bg-zinc-900 border border-white/5 shrink-0" />
                     <div className="space-y-2">
                       <div className="h-4 w-40 bg-zinc-900 rounded" />
                       <div className="h-3 w-28 bg-zinc-900 rounded" />
                     </div>
                   </div>
-                  <div className="flex-1 max-w-md space-y-2">
+                  <div className="md:col-span-4 space-y-2">
                     <div className="flex justify-between">
                       <div className="h-3 w-16 bg-zinc-900 rounded" />
                       <div className="h-3 w-8 bg-zinc-900 rounded" />
                     </div>
                     <div className="h-1.5 w-full bg-zinc-900 rounded-full" />
                   </div>
-                  <div className="h-9 w-24 bg-zinc-900 rounded-lg" />
+                  <div className="md:col-span-2 md:justify-self-end">
+                    <div className="h-9 w-24 bg-zinc-900 rounded-lg" />
+                  </div>
                 </div>
               ))
             ) : documents.length === 0 ? (
@@ -302,19 +304,19 @@ export default function DashboardPage() {
                 return (
                   <div 
                     key={doc.id}
-                    className="glass-panel border border-white/5 hover:border-white/10 rounded-xl p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6 transition-all duration-300 hover:shadow-lg"
+                    className="glass-panel border border-white/5 hover:border-white/10 rounded-xl p-5 grid grid-cols-1 md:grid-cols-12 items-stretch md:items-center gap-6 transition-all duration-300 hover:shadow-lg"
                   >
                     {/* Topic Info */}
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 md:col-span-6 overflow-hidden">
                       <div className={`h-11 w-11 rounded-lg bg-gradient-to-tr ${gradient} border border-white/5 flex items-center justify-center shrink-0`}>
                         <BookOpen size={18} className="text-zinc-300" />
                       </div>
-                      <div>
-                        <h4 className="font-bold text-sm sm:text-base text-white">{doc.title}</h4>
+                      <div className="overflow-hidden">
+                        <h4 className="font-bold text-sm sm:text-base text-white truncate" title={doc.title}>{doc.title}</h4>
                         <div className="flex items-center gap-3 text-xs text-zinc-500 mt-0.5">
-                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[10px] text-zinc-400">PDF Ingestion</span>
-                          <span className="flex items-center gap-1">
-                            <Clock size={11} /> 
+                          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-white/5 text-[10px] text-zinc-400 shrink-0">PDF Ingestion</span>
+                          <span className="flex items-center gap-1 truncate">
+                            <Clock size={11} className="shrink-0" /> 
                             {doc.page_count ? `${doc.page_count} pages • ` : ""}
                             {doc.estimated_reading_time || 0} min read
                           </span>
@@ -323,7 +325,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Progress bar */}
-                    <div className="flex-1 max-w-md space-y-1.5">
+                    <div className="md:col-span-4 space-y-1.5 w-full">
                       <div className="flex justify-between text-xs font-semibold text-zinc-400">
                         <span>{statusLabel}</span>
                         <span className="text-white">{progress}%</span>
@@ -339,7 +341,7 @@ export default function DashboardPage() {
                     </div>
 
                     {/* CTA Action */}
-                    <div className="shrink-0 flex items-center">
+                    <div className="shrink-0 flex items-center md:col-span-2 md:justify-self-end w-full md:w-auto">
                       <Link href={routeUrl} className="w-full md:w-auto">
                         <Button 
                           variant={doc.processing_status === "completed" ? "primary" : "secondary"} 
