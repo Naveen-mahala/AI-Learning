@@ -102,6 +102,32 @@ export default function DocumentDetailPage() {
   const [conceptsError, setConceptsError] = useState<string | null>(null);
   const [conceptsStep, setConceptsStep] = useState(0);
 
+  // Concepts dynamic progress states
+  const [conceptsProgress, setConceptsProgress] = useState(0);
+  const [subMessageIdx, setSubMessageIdx] = useState(0);
+
+  const dynamicSubMessages = [
+    "Contacting AI service engine...",
+    "Scanning document layout & vocabulary...",
+    "Drafting core concepts explanations...",
+    "Establishing dependency prerequisites...",
+    "Generating study guides & analogies...",
+    "Structuring relationship tree nodes...",
+    "Tracing prerequisite learning lines...",
+    "Polishing concept relevance scores...",
+    "Constructing adjacent connection links..."
+  ];
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (conceptsLoading) {
+      interval = setInterval(() => {
+        setSubMessageIdx((prev) => (prev + 1) % dynamicSubMessages.length);
+      }, 3500);
+    }
+    return () => clearInterval(interval);
+  }, [conceptsLoading]);
+
   const conceptsSteps = [
     "Analyzing Document",
     "Identifying Concepts",
@@ -203,14 +229,23 @@ export default function DocumentDetailPage() {
     setConceptsLoading(true);
     setConceptsError(null);
     setConceptsStep(0);
+    setConceptsProgress(5);
 
-    const intervalTime = 2500;
     const timer = setInterval(() => {
       setConceptsStep((prev) => {
-        if (prev < 4) return prev + 1;
-        return prev;
+        if (prev < 4) {
+          setConceptsProgress((p) => Math.min(p + 15, 80));
+          return prev + 1;
+        } else {
+          // Slow crawl once we hit Stage 5 ("Ranking Importance")
+          setConceptsProgress((p) => {
+            if (p < 98) return p + 1;
+            return p;
+          });
+          return prev;
+        }
       });
-    }, intervalTime);
+    }, 2000);
 
     try {
       const res = await fetch(`${API_URL}/api/document/${id}/extract-concepts`, {
@@ -225,6 +260,7 @@ export default function DocumentDetailPage() {
       }
 
       setConceptsStep(5); // Completed!
+      setConceptsProgress(100);
       setHasConcepts(true);
 
       setTimeout(() => {
@@ -693,8 +729,8 @@ export default function DocumentDetailPage() {
                     <Brain className="h-6 w-6 animate-pulse" />
                   </div>
                   <h3 className="text-lg font-bold text-white tracking-tight">Extracting Concept Map</h3>
-                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
-                    Building a reusable, structured educational knowledge graph of this document...
+                  <p className="text-xs text-violet-400 font-mono max-w-sm mx-auto animate-pulse h-4">
+                    &rarr; {dynamicSubMessages[subMessageIdx]}
                   </p>
                 </div>
 
@@ -702,14 +738,14 @@ export default function DocumentDetailPage() {
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-violet-400 font-mono">Stage {conceptsStep + 1} of 6</span>
                     <span className="text-zinc-500 font-mono">
-                      {Math.round(((conceptsStep + 1) / 6) * 100)}%
+                      {conceptsProgress}%
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
                     <motion.div 
                       className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full"
                       initial={{ width: "0%" }}
-                      animate={{ width: `${((conceptsStep + 1) / 6) * 100}%` }}
+                      animate={{ width: `${conceptsProgress}%` }}
                       transition={{ duration: 0.5 }}
                     />
                   </div>

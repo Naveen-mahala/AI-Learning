@@ -77,6 +77,32 @@ export default function DocumentConceptsPage() {
   const [conceptDetail, setConceptDetail] = useState<ConceptDetail | null>(null);
   const [drawerLoading, setDrawerLoading] = useState(false);
 
+  // Progressive crawling loader states
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [subMessageIdx, setSubMessageIdx] = useState(0);
+
+  const dynamicSubMessages = [
+    "Reading document pages...",
+    "Running educational theme analysis...",
+    "Drafting core concepts definitions...",
+    "Resolving parent-child dependencies...",
+    "Synthesizing learning tips & analogies...",
+    "Constructing adjacent relationship maps...",
+    "Tracing prerequisite learning paths...",
+    "Polishing knowledge node weights...",
+    "Assembling structural concept graph..."
+  ];
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (extracting) {
+      interval = setInterval(() => {
+        setSubMessageIdx((prev) => (prev + 1) % dynamicSubMessages.length);
+      }, 3500);
+    }
+    return () => clearInterval(interval);
+  }, [extracting]);
+
   const extractionSteps = [
     "Analyzing Document",
     "Identifying Concepts",
@@ -131,15 +157,24 @@ export default function DocumentConceptsPage() {
     setExtracting(true);
     setExtractionError(null);
     setExtractionStep(0);
+    setProgressPercent(5);
 
     // Progression timer for loading experience steps
-    const stepDuration = 2500;
     const timer = setInterval(() => {
       setExtractionStep((prev) => {
-        if (prev < 4) return prev + 1;
-        return prev;
+        if (prev < 4) {
+          setProgressPercent((p) => Math.min(p + 15, 80));
+          return prev + 1;
+        } else {
+          // Slow crawl once we hit Stage 5 ("Ranking Importance")
+          setProgressPercent((p) => {
+            if (p < 98) return p + 1;
+            return p;
+          });
+          return prev;
+        }
       });
-    }, stepDuration);
+    }, 2000);
 
     try {
       const res = await fetch(`${API_URL}/api/document/${id}/extract-concepts`, {
@@ -154,6 +189,7 @@ export default function DocumentConceptsPage() {
       }
 
       setExtractionStep(5); // Completed!
+      setProgressPercent(100);
       
       // Reload concepts after extraction
       setTimeout(() => {
@@ -274,8 +310,8 @@ export default function DocumentConceptsPage() {
                     <Brain className="h-6 w-6 animate-pulse" />
                   </div>
                   <h3 className="text-lg font-bold text-white tracking-tight">Extracting Concept Map</h3>
-                  <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-                    Building a reusable, structured educational knowledge graph of this document...
+                  <p className="text-xs text-violet-400 font-mono max-w-xs mx-auto animate-pulse h-4">
+                    &rarr; {dynamicSubMessages[subMessageIdx]}
                   </p>
                 </div>
 
@@ -284,15 +320,15 @@ export default function DocumentConceptsPage() {
                   <div className="flex justify-between items-center text-xs font-semibold">
                     <span className="text-violet-400 font-mono">Stage {extractionStep + 1} of 6</span>
                     <span className="text-zinc-500 font-mono">
-                      {Math.round(((extractionStep + 1) / 6) * 100)}%
+                      {progressPercent}%
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
                     <motion.div 
                       className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full"
                       initial={{ width: "0%" }}
-                      animate={{ width: `${((extractionStep + 1) / 6) * 100}%` }}
-                      transition={{ duration: 0.4 }}
+                      animate={{ width: `${progressPercent}%` }}
+                      transition={{ duration: 0.5 }}
                     />
                   </div>
                 </div>
