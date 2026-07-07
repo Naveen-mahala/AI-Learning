@@ -18,7 +18,8 @@ import {
   ExternalLink,
   Info,
   Sparkles,
-  CheckCircle
+  CheckCircle,
+  Brain
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/Card";
@@ -94,6 +95,39 @@ export default function DocumentDetailPage() {
     }
   }, [id]);
 
+  // Concept Extraction States
+  const [hasConcepts, setHasConcepts] = useState(false);
+  const [checkingConcepts, setCheckingConcepts] = useState(true);
+  const [conceptsLoading, setConceptsLoading] = useState(false);
+  const [conceptsError, setConceptsError] = useState<string | null>(null);
+  const [conceptsStep, setConceptsStep] = useState(0);
+
+  const conceptsSteps = [
+    "Analyzing Document",
+    "Identifying Concepts",
+    "Building Knowledge Structure",
+    "Finding Relationships",
+    "Ranking Importance",
+    "Completed"
+  ];
+
+  const checkConceptsExist = useCallback(async () => {
+    try {
+      setCheckingConcepts(true);
+      const res = await fetch(`${API_URL}/api/document/${id}/concepts`);
+      if (res.ok) {
+        setHasConcepts(true);
+      } else {
+        setHasConcepts(false);
+      }
+    } catch (err) {
+      console.error("Error checking concepts status:", err);
+      setHasConcepts(false);
+    } finally {
+      setCheckingConcepts(false);
+    }
+  }, [id]);
+
   const fetchDocumentDetail = useCallback(async () => {
     try {
       setLoading(true);
@@ -119,8 +153,9 @@ export default function DocumentDetailPage() {
     if (id) {
       fetchDocumentDetail();
       checkSummaryExists();
+      checkConceptsExist();
     }
-  }, [id, fetchDocumentDetail, checkSummaryExists]);
+  }, [id, fetchDocumentDetail, checkSummaryExists, checkConceptsExist]);
 
   const handleGenerateSummary = async () => {
     setSummaryLoading(true);
@@ -161,6 +196,47 @@ export default function DocumentDetailPage() {
       console.error(err);
       setSummaryError(err.message || "An unexpected error occurred during summary generation.");
       setSummaryLoading(false);
+    }
+  };
+
+  const handleExtractConcepts = async () => {
+    setConceptsLoading(true);
+    setConceptsError(null);
+    setConceptsStep(0);
+
+    const intervalTime = 2500;
+    const timer = setInterval(() => {
+      setConceptsStep((prev) => {
+        if (prev < 4) return prev + 1;
+        return prev;
+      });
+    }, intervalTime);
+
+    try {
+      const res = await fetch(`${API_URL}/api/document/${id}/extract-concepts`, {
+        method: "POST"
+      });
+
+      clearInterval(timer);
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || "Failed to extract concepts.");
+      }
+
+      setConceptsStep(5); // Completed!
+      setHasConcepts(true);
+
+      setTimeout(() => {
+        setConceptsLoading(false);
+        router.push(`/documents/${id}/concepts`);
+      }, 1000);
+
+    } catch (err: any) {
+      clearInterval(timer);
+      console.error(err);
+      setConceptsError(err.message || "An unexpected error occurred during concept extraction.");
+      setConceptsLoading(false);
     }
   };
 
@@ -238,6 +314,31 @@ export default function DocumentDetailPage() {
                         <Sparkles size={12} />
                       )}
                       Generate Smart Summary
+                    </Button>
+                  )
+                )}
+                {doc.processing_status === "completed" && !checkingConcepts && (
+                  hasConcepts ? (
+                    <Link href={`/documents/${doc.id}/concepts`}>
+                      <Button variant="primary" size="sm" className="h-9 px-3 text-xs bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(99,102,241,0.3)] border border-indigo-500/20 font-semibold">
+                        <Brain size={12} className="animate-pulse" />
+                        View Concepts
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Button 
+                      variant="primary" 
+                      size="sm" 
+                      onClick={handleExtractConcepts}
+                      disabled={conceptsLoading}
+                      className="h-9 px-3 text-xs bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(99,102,241,0.2)] border border-indigo-500/10 font-semibold"
+                    >
+                      {conceptsLoading ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Brain size={12} />
+                      )}
+                      Extract Concepts
                     </Button>
                   )
                 )}
@@ -463,6 +564,30 @@ export default function DocumentDetailPage() {
           </motion.div>
         )}
 
+        {/* CONCEPTS ERROR DISPLAY */}
+        <AnimatePresence>
+          {conceptsError && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="flex items-start gap-3 p-4 rounded-xl border border-red-500/20 bg-red-950/15 mb-6"
+            >
+              <AlertCircle size={16} className="text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-1">
+                <h4 className="text-sm font-bold text-red-200">Concept Extraction Failed</h4>
+                <p className="text-xs text-red-300/80 leading-relaxed">{conceptsError}</p>
+              </div>
+              <button 
+                onClick={() => setConceptsError(null)}
+                className="text-xs text-red-400 hover:text-red-300 font-semibold cursor-pointer"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* SUMMARY GENERATION PROGRESS MODAL OVERLAY */}
         <AnimatePresence>
           {summaryLoading && (
@@ -524,6 +649,84 @@ export default function DocumentDetailPage() {
                             ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" 
                             : isActive 
                             ? "bg-violet-500/20 border-violet-500 text-violet-300 animate-pulse" 
+                            : "bg-zinc-900 border-zinc-800 text-zinc-600"
+                        }`}>
+                          {isDone ? <CheckCircle size={10} /> : idx + 1}
+                        </div>
+                        <span className={`text-xs font-medium transition-colors duration-300 ${
+                          isDone ? "text-zinc-400" : isActive ? "text-violet-300 font-bold" : "text-zinc-600"
+                        }`}>
+                          {stepName}
+                        </span>
+                        {isActive && (
+                          <Loader2 size={12} className="animate-spin text-violet-400 ml-auto" />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CONCEPT EXTRACTION PROGRESS MODAL OVERLAY */}
+        <AnimatePresence>
+          {conceptsLoading && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 10 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 10 }}
+                className="w-full max-w-lg bg-zinc-950/80 border border-violet-500/20 rounded-2xl p-6 md:p-8 shadow-2xl space-y-6 relative overflow-hidden"
+              >
+                <div className="absolute -top-10 -left-10 h-32 w-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute -bottom-10 -right-10 h-32 w-32 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+                
+                <div className="space-y-1.5 text-center">
+                  <div className="mx-auto h-12 w-12 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-2">
+                    <Brain className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white tracking-tight">Extracting Concept Map</h3>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                    Building a reusable, structured educational knowledge graph of this document...
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-violet-400 font-mono">Stage {conceptsStep + 1} of 6</span>
+                    <span className="text-zinc-500 font-mono">
+                      {Math.round(((conceptsStep + 1) / 6) * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                    <motion.div 
+                      className="h-full bg-gradient-to-r from-violet-500 via-purple-500 to-indigo-500 rounded-full"
+                      initial={{ width: "0%" }}
+                      animate={{ width: `${((conceptsStep + 1) / 6) * 100}%` }}
+                      transition={{ duration: 0.5 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {conceptsSteps.map((stepName, idx) => {
+                    const isDone = conceptsStep > idx;
+                    const isActive = conceptsStep === idx;
+
+                    return (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-colors duration-300 ${
+                          isDone 
+                            ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" 
+                            : isActive 
+                            ? "bg-violet-500/20 border-violet-500 text-violet-300 animate-pulse shadow-[0_0_8px_rgba(139,92,246,0.3)]" 
                             : "bg-zinc-900 border-zinc-800 text-zinc-600"
                         }`}>
                           {isDone ? <CheckCircle size={10} /> : idx + 1}

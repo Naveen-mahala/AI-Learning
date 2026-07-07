@@ -2,7 +2,8 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
-from app.routes import documents
+from app.routes import documents, concepts
+from app.models.concept import Concept, ConceptRelationship
 from app.utils.logger import setup_logging
 
 # Configure logging
@@ -35,6 +36,7 @@ app.add_middleware(
 
 # Include routes
 app.include_router(documents.router)
+app.include_router(concepts.router)
 
 @app.get("/")
 def read_root():
