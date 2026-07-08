@@ -5,6 +5,7 @@ from app.database import engine, Base
 from app.routes import documents, concepts
 from app.models.concept import Concept, ConceptRelationship
 from app.models.revision_note import RevisionNote
+from app.models.important_question import ImportantQuestion
 from app.utils.logger import setup_logging
 
 # Configure logging

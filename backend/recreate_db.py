@@ -7,6 +7,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from app.database import engine, Base
 from app.models.document import Document, DocumentContent, DocumentProcessingLog, DocumentSummary
 from app.models.concept import Concept, ConceptRelationship
+from app.models.revision_note import RevisionNote
+from app.models.important_question import ImportantQuestion
 
 def recreate_database():
     print("Connecting to database...")

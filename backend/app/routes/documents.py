@@ -17,6 +17,9 @@ from app.services.ai_service import AIManager, AIProviderError
 from app.schemas.revision_note import RevisionNoteResponse
 from app.services.revision_note_service import RevisionNoteService
 from app.repositories.revision_note_repo import RevisionNoteRepository
+from app.schemas.important_question import ImportantQuestionResponse
+from app.services.important_question_service import ImportantQuestionService
+from app.repositories.important_question_repo import ImportantQuestionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -295,5 +298,61 @@ def get_revision(
             detail=f"Revision notes not found for document {id} with mode '{revision_type}'."
         )
     return revision
+
+
+@router.post("/api/document/{id}/generate-important-questions", response_model=ImportantQuestionResponse)
+@router.post("/api/documents/{id}/generate-important-questions", response_model=ImportantQuestionResponse)
+def generate_important_questions(
+    id: str,
+    question_mode: str = "Mixed Mode",
+    provider: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Triggers AI-based Important Questions generation for the given document and question mode.
+    Saves the generated questions package to the database and returns it.
+    """
+    logger.info(f"Generate important questions request received for document {id}, mode: {question_mode}")
+    
+    valid_modes = ["Exam Mode", "Interview Mode", "Viva Mode", "Mixed Mode"]
+    if question_mode not in valid_modes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid question_mode '{question_mode}'. Must be one of {valid_modes}."
+        )
+
+    return ImportantQuestionService.generate_questions_sync(
+        db=db,
+        doc_id=id,
+        question_mode=question_mode,
+        provider=provider
+    )
+
+
+@router.get("/api/document/{id}/important-questions", response_model=ImportantQuestionResponse)
+@router.get("/api/documents/{id}/important-questions", response_model=ImportantQuestionResponse)
+def get_important_questions(
+    id: str,
+    question_mode: str = "Mixed Mode",
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves the saved important questions package for a document, filtered by question mode.
+    """
+    valid_modes = ["Exam Mode", "Interview Mode", "Viva Mode", "Mixed Mode"]
+    if question_mode not in valid_modes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid question_mode '{question_mode}'. Must be one of {valid_modes}."
+        )
+
+    questions = ImportantQuestionRepository.get_questions(db, id, question_mode)
+    if not questions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Important questions not found for document {id} with mode '{question_mode}'."
+        )
+    return questions
+
 
 

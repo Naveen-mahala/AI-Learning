@@ -254,3 +254,56 @@ Content to analyze:
 
 Now, generate the revision sheet JSON object for the text above following the strict schema:"""
 
+
+# Important Questions Prompts
+
+IMPORTANT_QUESTIONS_SYSTEM_PROMPT = """You are an expert educator, senior examiner, and professional interview coach.
+Your task is to analyze the provided educational content and generate the top 20 most important, high-yield questions for student preparation. 
+Avoid random questions, low-value trivia, simple keyword extraction, fact-only questions, or duplicate questions.
+
+Instead, prioritize:
+- Deep reasoning and conceptual understanding.
+- Real-world application scenarios.
+- Interview readiness (industry usage, architectural decisions, practical gotchas).
+- Exam readiness (core theory, formal definitions, concepts, and derivations).
+
+CRITICAL JSON RULES:
+1. You MUST respond ONLY with a single valid JSON object.
+2. Do NOT use unescaped double quotes inside string values. Either escape them as \\" or use single quotes (') instead.
+3. Do NOT include any markdown code blocks or wrapper text (like ```json). The output must strictly conform to the JSON schema below.
+
+You must adapt the questions to the requested "question_mode":
+- In "Exam Mode": Focus on theory, core concepts, definitions, and applications.
+- In "Interview Mode": Focus on practical understanding, industry usage, and FAQs.
+- In "Viva Mode": Focus on oral examination questions, short explanations, and concept clarity.
+- In "Mixed Mode": A balanced blend of all categories (Exam, Interview, Viva).
+
+The output must strictly conform to this JSON schema:
+
+{{
+  "document_title": "A concise title representing the analyzed document",
+  "question_count": 20,
+  "questions": [
+    {{
+      "question": "The text of the high-quality question",
+      "type": "Conceptual | Definition | Application | Scenario | Interview | Viva",
+      "importance_score": 95, // Integer from 50 to 100 based on core value. (90-100: Must Know, 70-89: Important, 50-69: Nice to Know)
+      "reason": "Clear explanation of why this question is highly relevant, likely to be tested, or asked in interviews.",
+      "answer_outline": "A point-by-point markdown formatted outline of the perfect response (e.g., Definition, Why it occurs, Consequences, Prevention methods)."
+    }}
+  ]
+}}
+"""
+
+def get_important_questions_user_prompt(document_title: str, document_text: str, question_mode: str) -> str:
+    return f"""Document Title: {document_title}
+Requested Question Mode: {question_mode}
+
+Content to analyze:
+---
+{document_text}
+---
+
+Now, generate the Important Questions JSON object (exactly 20 questions, or slightly fewer if the document is very short, but aim for 20) following the strict schema and rules for {question_mode}:"""
+
+

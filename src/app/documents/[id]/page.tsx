@@ -20,7 +20,8 @@ import {
   Sparkles,
   CheckCircle,
   Brain,
-  Zap
+  Zap,
+  HelpCircle
 } from "lucide-react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Card } from "@/components/ui/Card";
@@ -384,6 +385,14 @@ export default function DocumentDetailPage() {
                     <Button variant="primary" size="sm" className="h-9 px-3 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-violet-500/20 font-semibold">
                       <Zap size={12} />
                       Revision Notes
+                    </Button>
+                  </Link>
+                )}
+                {doc.processing_status === "completed" && (
+                  <Link href={`/documents/${doc.id}/questions`}>
+                    <Button variant="primary" size="sm" className="h-9 px-3 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white flex items-center gap-1.5 shadow-[0_0_15px_rgba(99,102,241,0.3)] border border-indigo-500/20 font-semibold">
+                      <HelpCircle size={12} />
+                      Important Questions
                     </Button>
                   </Link>
                 )}
